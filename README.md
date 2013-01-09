@@ -1,6 +1,6 @@
 [Edit README.md](https://github.com/optimuscoprime/battlecode/edit/master/README.md)
 
-battlecode
+Battlecode
 ==========
 
 ## Setup
