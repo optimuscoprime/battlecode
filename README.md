@@ -3,6 +3,10 @@
 Battlecode
 ==========
 
+## Strategy
+
+[Battlecode 2013 Gameplay Specs](https://github.com/battlecode/battlecode-server/blob/2013-1.1.1/specs.md)
+
 ## Setup
 
 * [Download and run the installer](https://www.battlecode.org/contestants/releases/)
