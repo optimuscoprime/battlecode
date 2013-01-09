@@ -13,6 +13,13 @@ Battlecode
 
 [Software/Testing](http://s3.amazonaws.com/battlecode-releases-2013/docs/software.html)
 
+## Random collection of links
+
+* https://www.battlecode.org/contestants/calendar/
+* http://cory.li/battlecode-intro/
+* http://video.mit.edu/watch/6370-battlecode-jan-9-8877/
+* http://stevearc.blogspot.com.au/2011/12/battlecode-postmortem-2011.html?m=1
+
 ## Setup
 
 * [Download and run the installer](https://www.battlecode.org/contestants/releases/)
@@ -32,10 +39,3 @@ If you change something, type:
 * `git add .`
 * `git commit -a`
 * `git push`
-
-## Random collection of links
-
-* https://www.battlecode.org/contestants/calendar/
-* http://cory.li/battlecode-intro/
-* http://video.mit.edu/watch/6370-battlecode-jan-9-8877/
-* http://stevearc.blogspot.com.au/2011/12/battlecode-postmortem-2011.html?m=1
