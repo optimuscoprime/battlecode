@@ -17,3 +17,10 @@ battlecode
 * Run: `ant run`, set Team A and Team B to team219, and tick "Compute and view match synchronously"
 
 Also see the [Battlecode 2013 Software Documentation](http://s3.amazonaws.com/battlecode-releases-2013/docs/software.html)
+
+## Git
+
+If you change something, type:
+* `git add .`
+* `git commit -a`
+* `git push`
