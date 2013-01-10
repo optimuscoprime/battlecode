@@ -1,0 +1,5 @@
+
+
+like sc0003, but won't shy away from moving onto landmines.
+
+When on a landmine, will stay and defuse until mine is gone, then begin moving again.

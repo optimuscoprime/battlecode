@@ -1,4 +1,4 @@
-package sc0001;
+package sc0004;
 
 import battlecode.common.Direction;
 import battlecode.common.GameConstants;
@@ -24,24 +24,20 @@ public class RobotPlayer {
 		    }
 		} else if (rc.getType() == RobotType.SOLDIER) {
 		    if (rc.isActive()) {
-			if (Math.random()<0.005) {
-			    // Lay a mine 
-			    if(rc.senseMine(rc.getLocation())==null)
-				rc.layMine();
-			} else { 
+			if (rc.senseMine(rc.getLocation()) != null) {
+			    
+			    rc.defuseMine(rc.getLocation());
+			    
+			} else {
+			
 			    // Choose a random direction, and move that way if possible
 			    Direction dir = Direction.values()[(int)(Math.random()*8)];
-
-			    for (int i = 0; i < 8; i++) {
-				MapLocation location_in_dir = rc.getLocation().add(dir);
-				
-				if (rc.senseMine(location_in_dir) == null) {
-				    break;
-				}
-				
-				dir = dir.rotateLeft();
-			    }
-
+			    
+			    // but, every so often, greedy to enemy HQ
+			    if (Math.random() < 0.25) {
+				dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+			    }			
+			    
 			    if(rc.canMove(dir)) {
 				rc.move(dir);
 				rc.setIndicatorString(0, "Last direction moved: "+dir.toString());
