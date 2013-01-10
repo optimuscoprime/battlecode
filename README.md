@@ -52,5 +52,5 @@ Battlecode
 If you change something, type:
 * `git add .`
 * `git commit -a`
-* `git push`
+* `git push` (maybe also `git pull` before pushing to get the latest changes from others)
 
