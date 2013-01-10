@@ -36,8 +36,9 @@ Battlecode
   is a 'RobotPlayer.java' and a 'desc.txt', which provides notes on the properties of
   that RobotPlayer.
 * Each RobotPlayer you make will have to have a different package name set at the top of
-  the file to make 'ant build' (see below) work successfully. I've used 'team219.<foldername>'
-  eg my robot in folder 'sc0001' has package name 'team219.sc0001'
+  the file to make 'ant build' (see below) work successfully. Use the folder name as the package
+  name to conform with Java packaging rules (eg a RobotPlayer in folder 'sc0001' should be
+  in package 'sc0001'.
 
 ## Testing
 
