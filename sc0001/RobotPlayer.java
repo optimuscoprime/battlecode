@@ -1,4 +1,4 @@
-package team219;
+package team219.sc0001;
 
 import battlecode.common.Direction;
 import battlecode.common.GameConstants;
