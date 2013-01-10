@@ -1,0 +1,5 @@
+
+
+This is the sample player, except before it makes a move it checks that the cell
+it wants to move to isn't covered by a mine. If it is, then it rotates the direction
+left and checks again until a non-mine cell is found, then moves.

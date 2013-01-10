@@ -1,0 +1,4 @@
+
+
+this is version sc0002, with instead of moving in a random direction,
+25% of the time the robot tries moving towards the enemy HQ (if clear of mines).
