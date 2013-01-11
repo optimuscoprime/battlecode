@@ -44,6 +44,7 @@ Battlecode
 
 * (On OSX): Type `cd /Applications/Battlecode2013`
 * Run: `ant build` (I am using genuine Java 1.6, `java -version` "1.6.0_29", I also set `JAVA_HOME=""`)
+* You might want to set `bc.client.sound-on=false` in your `bc.conf` at this point
 * Run: `ant run`, set Team A and Team B to teams you have copied into the teams directory, 
   and tick "Compute and view match synchronously" (remember to select a map)
 * "Right-clicking on an open square in the map brings up a menu that lets you add new units to the map. Right-clicking on an existing unit allows you to set its control bits, which the robot's player can query and react to. You can also drag-and-drop units on the map."
