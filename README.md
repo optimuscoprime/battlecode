@@ -18,6 +18,7 @@ Battlecode
 * http://video.mit.edu/watch/6370-battlecode-jan-9-8877/
 * More videos here: http://video.mit.edu/search/?q=6.370
 * http://stevearc.blogspot.com.au/2011/12/battlecode-postmortem-2011.html?m=1
+* http://www.battlecode.org/info/vanqeri/
 
 ## Setup
 
