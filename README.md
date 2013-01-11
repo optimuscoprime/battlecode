@@ -9,7 +9,7 @@ Battlecode
 
 * [Rules](https://github.com/battlecode/battlecode-server/blob/2013-1.1.1/specs.md)
 * [Javadoc](http://s3.amazonaws.com/battlecode-releases-2013/javadoc/index.html)
-* [Software/Testing](http://s3.amazonaws.com/battlecode-releases-2013/docs/software.html)
+* [Software/Testing](http://s3.amazonaws.com/battlecode-releases-2013/docs/software.html) (lists keyboard shortcuts)
 
 ## Random collection of links
 
