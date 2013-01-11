@@ -23,11 +23,9 @@ Battlecode
 * [Download and run the installer](https://www.battlecode.org/contestants/releases/)
 * (On OSX) Type: `cd /Applications/Battlecode2013/`
 * The above directory contains a folder called 'teams'. The repo you are about to clone
-  contains the contents of a teams looking directory, so...
-* `git clone git@github.com:optimuscoprime/battlecode.git`
-  ... the repo over the teams folder.
-* then `mv battlecode teams` (or just clone somewhere else and hand pick the teams you 
-  want to copy into the 'teams/' directory
+  contains the contents of a teams looking directory, so remove the original directory...
+* `rm teams`, and then type
+* `git clone git@github.com:optimuscoprime/battlecode.git teams`
 
 ## Folder layout
 
