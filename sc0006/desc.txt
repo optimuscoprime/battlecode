@@ -1,0 +1,5 @@
+
+
+like sc0005, but moves directly towards enemy HQ everytime it decides to move rather than 25% of the movement time.
+
+(still chooses to defuse mines if faced with one in it's path)

@@ -1,0 +1,7 @@
+
+
+
+like sc0006, but instead of always trying to blindly move towards the enemy HQ, if something's 
+blocking that path (like another robot) then tries to find another cell to move
+to by continueally rotatieLeft-ing.
+

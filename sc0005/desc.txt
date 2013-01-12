@@ -1,0 +1,4 @@
+
+
+
+like sc0004, but defuses a mine from an adjacent square rather than standing on it to defuse.
