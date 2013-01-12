@@ -1,0 +1,8 @@
+
+
+
+like sc0007, 
+- move towards the enemy HQ 
+- if something's blocking that path (like another robot) 
+- then tries to find another cell to moveto by continually rotatieLeft-ing.
+- once a few bots are built, get the defuse upgrade.
