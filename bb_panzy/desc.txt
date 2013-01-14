@@ -1,0 +1,8 @@
+
+
+restructured sc0011 to attempt to usee encampements.
+.. it's not good, but shows what artillery's like.
+
+Really though, you don't see that except against nuke bots, since I
+can't see how you detect enemy robots (senseNearby doesn't seem to work
+properly).
