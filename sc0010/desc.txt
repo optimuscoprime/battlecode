@@ -1,0 +1,9 @@
+
+
+
+like 0009, but slightly better short term path planning
+
+
+considers not only the square in the direction of the enemy HQ, but the 
+squares one rotation left and right of that direction and picks the 
+best square out of the three.

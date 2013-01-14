@@ -1,0 +1,4 @@
+
+
+
+like 0008, but after spawning a few soldiers, researches defusion, then continues spawning soldiers
