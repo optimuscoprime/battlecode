@@ -1,0 +1,4 @@
+
+
+restructured sc0010 to try to make use of comms to assign roles to robots
+so that robots would remain in those roles each turn. (Work in progress)
