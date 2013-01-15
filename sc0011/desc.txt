@@ -1,4 +1,11 @@
 
 
 restructured sc0010 to try to make use of comms to assign roles to robots
-so that robots would remain in those roles each turn. (Work in progress)
+so that robots would remain in those roles each turn. 
+
+Every even soldier spawned is a scout, every other a "miner".
+
+Miners used to mine, nut now they just guard (as they were getting picked off while mining).
+
+When clock reaches 600 (if the game gets that far)... all miners become scouts and charge 
+on mass at enemy HQ.
