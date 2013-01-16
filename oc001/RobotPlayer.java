@@ -14,7 +14,7 @@ public class RobotPlayer {
 		}
 	}
 
-	//	System.setProperty("debugMethodsEnabled", "true");
+	// System.setProperty("debugMethodsEnabled", "true");
 	// use bc.conf to turn debug mode on	
 	private static void debug_printf(String format, Object ... objects) {
 		System.out.printf(format, objects);
