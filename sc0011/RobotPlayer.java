@@ -6,21 +6,38 @@ import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotType;
+import battlecode.common.Team;
 import battlecode.common.Upgrade;
 
 public class RobotPlayer {    
     public static void run(RobotController rc) {
 	while (true) {
 	    try {
+		int clock_round = Clock.getRoundNum();
+
 		if (rc.getType() == RobotType.HQ) {
+		    // if (clock_round == 200) {
+		    // 	if (rc.canMove()) {
+		    // 	    if (!rc.hasUpgrade(Upgrade.valueOf("NUKE"))) {
+		    // 		rc.researchUpgrade(Upgrade.valueOf("NUKE"));
+		    // 	    }
+		    // 	}
+		    // } else {
 		    HQPlayer(rc);
+		    // }
 		} else if (rc.getType() == RobotType.SOLDIER) {
 		    int global_task = getRobotTask(rc, 1);		    
 		    int task = getRobotTask(rc, rc.getRobot().getID());
-		    
-		    if (Clock.getRoundNum() > 600) {
+		    int kind_of_map_size = (rc.getMapWidth() + rc.getMapHeight()) / 2;
+
+		    if (clock_round > 500 && clock_round < 500 + kind_of_map_size * 1.5) {
 			ScoutPlayer(rc);
-			
+		    } else if (clock_round > 1000 && clock_round < 1000 + kind_of_map_size * 1.5) {
+			ScoutPlayer(rc);
+		    } else if (clock_round > 1500 && clock_round < 1500 + kind_of_map_size * 1.5) {
+			ScoutPlayer(rc);
+		    } else if (clock_round > 1800 && clock_round < 1800 + kind_of_map_size * 1.5) {
+			ScoutPlayer(rc);
 		    } else {
 
 			if (global_task == ROBOT_TASK_UNKNOWN || global_task == ROBOT_TASK_SCOUT) {
@@ -91,7 +108,7 @@ public class RobotPlayer {
 	    } else {
 			    
 		rc.researchUpgrade(Upgrade.valueOf("DEFUSION"));
-			    
+
 	    }
 	}
 	//if (Clock.getRoundNum() % 100 == 0) {
@@ -130,8 +147,11 @@ public class RobotPlayer {
 	    int dir_dist_to_enemy_hq_left = location_in_dir_left.distanceSquaredTo(enemy_hq);
 	    int dir_dist_to_enemy_hq_right = location_in_dir_right.distanceSquaredTo(enemy_hq);
 	    
-	    boolean mine_at_left = rc.senseMine(location_in_dir_left) != null;
-	    boolean mine_at_right = rc.senseMine(location_in_dir_right) != null;
+	    Team mine_obj_at_left = rc.senseMine(location_in_dir_left);
+	    Team mine_obj_at_right = rc.senseMine(location_in_dir_right);
+	    
+	    boolean mine_at_left = (mine_obj_at_left != null) && (! mine_obj_at_left.equals(rc.getTeam()));
+	    boolean mine_at_right = (mine_obj_at_right != null) && (! mine_obj_at_right.equals(rc.getTeam()));
 	    
 	    // if no mines, then pick closest
 	    if (!mine_at_left && !mine_at_right) {
@@ -165,8 +185,9 @@ public class RobotPlayer {
 	    for (int i = 0; i < 8; i++) {
 
 		MapLocation location_of_dir = rc.getLocation().add(dir);
+		Team mine_obj_in_dir = rc.senseMine(location_of_dir);
 		
-		if (rc.senseMine(location_of_dir) != null) {
+		if (mine_obj_in_dir != null && (! mine_obj_in_dir.equals(rc.getTeam()))) {
 		    rc.defuseMine(location_of_dir);
 		    break;
 		} else {
@@ -198,7 +219,7 @@ public class RobotPlayer {
 
 	    if (inRange(dist_to_hq-1, desired_radius * desired_radius, dist_to_hq+1)) {
 		if (rc.senseMine(rc.getLocation()) == null) {
-		    //rc.layMine();
+		    rc.layMine();
 		    return;
 		}
 	    }
@@ -210,7 +231,9 @@ public class RobotPlayer {
 	    
 		MapLocation dir_loc = rc.getLocation().add(dir);	       
 		
-		if (rc.senseMine(dir_loc) == null) {
+		Team mine_obj_in_dir = rc.senseMine(dir_loc);
+
+		if (mine_obj_in_dir == null || mine_obj_in_dir.equals(rc.getTeam())) {
 		    if (rc.canMove(dir)) {
 			rc.move(dir);
 			return;
