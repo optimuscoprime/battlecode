@@ -25,7 +25,7 @@ public class RobotPlayer {
 
 			if (global_task == ROBOT_TASK_UNKNOWN || global_task == ROBOT_TASK_SCOUT) {
 			    if (task == ROBOT_TASK_UNKNOWN) {
-				System.out.println("Made SCOUT (crisis)");
+				//System.out.println("Made SCOUT (crisis)");
 				setRobotTask(rc, rc.getRobot().getID(), ROBOT_TASK_SCOUT);
 				ScoutPlayer(rc);
 			    } else if (task == ROBOT_TASK_ERROR) {
@@ -37,11 +37,11 @@ public class RobotPlayer {
 				setRobotTask(rc, 0, rand+1);
 				
 				if (rand % 3 == 0) {
-				    System.out.println("Made SCOUT");
+				    //System.out.println("Made SCOUT");
 				    setRobotTask(rc, rc.getRobot().getID(), ROBOT_TASK_SCOUT);
 				    ScoutPlayer(rc);
 				} else {
-				    System.out.println("Made MINER");
+				    //System.out.println("Made MINER");
 				    setRobotTask(rc, rc.getRobot().getID(), ROBOT_TASK_MINER);
 				    MinerPlayer(rc);
 				}
