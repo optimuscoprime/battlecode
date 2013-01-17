@@ -30,6 +30,7 @@ public class RobotPlayer {
 	private final static int DEFAULT_SENSE_FRIENDLY_RADIUS = 1;	
 	
 	// TODO: calculate these dynamically maybe based on the X and Y starting positions? map width and height?
+	// TODO: also, this isn't the best idea for oc002 vs oc002 (shared channels)
 	private final static int NUM_ENEMIES_CHANNEL_1 = 12098;
 	private final static int NUM_ENEMIES_CHANNEL_2 = 21987;
 	private final static int NUM_ENEMIES_CHANNEL_3 = 31045;
