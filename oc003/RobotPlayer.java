@@ -1,9 +1,12 @@
 package oc003;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -18,7 +21,7 @@ import battlecode.common.Team;
 import battlecode.common.Upgrade;
 
 public class RobotPlayer {    	
-	private final static double MIN_TEAM_POWER = 50.0;
+	private final static double MIN_TEAM_POWER = 60.0;
 
 	private final static int ROUND_NUM_SELF_DESTRUCT = 2000;
 	
@@ -29,11 +32,12 @@ public class RobotPlayer {
 	private final static int DEFAULT_SENSE_ENEMY_RADIUS = 150;
 	private final static int DEFAULT_SENSE_FRIENDLY_RADIUS = 1;	
 	
-	// TODO: calculate these dynamically maybe based on the X and Y starting positions? map width and height?
-	// TODO: also, this isn't the best idea for oc002 vs oc002 (shared channels)
 	private static int NUM_ENEMIES_CHANNEL_1;
 	private static int NUM_ENEMIES_CHANNEL_2;
-	private static int NUM_ENEMIES_CHANNEL_3;
+	private static int STOP_NUKE_CHANNEL_1;
+	private static int STOP_NUKE_CHANNEL_2;
+	
+	private final static int STOP_NUKE_MAGIC_NUMBER = 23892;
 
 	private final static int NUM_ENEMIES_SEEN_RECENTLY_ATTACK_HQ_THRESHOLD = 20;
 	private final static int MIN_NUM_FRIENDLIES_ALIVE_ATTACK_THRESHOLD = 20;
@@ -42,11 +46,13 @@ public class RobotPlayer {
 	private final static double MIN_POWER_TO_READ_BROADCAST = GameConstants.BROADCAST_READ_COST * 2;
 	private final static double MIN_POWER_TO_SEND_BROADCAST = GameConstants.BROADCAST_SEND_COST * 2;
 	
-	// caching
+	// caching - each player gets its own private variables?
 	private static Team MY_TEAM;
 	private static Team OPPOSING_TEAM;
 	private static int MAP_WIDTH;
 	private static int MAP_HEIGHT;
+	private static boolean SHOULD_STOP_NUKE = false;
+	private static int numEnemiesSeen = 0;
 	
 	public static void run(RobotController rc) {
 		initialise(rc);
@@ -71,17 +77,24 @@ public class RobotPlayer {
 	}
 	
 	private static void pickChannels(RobotController rc) {		
-		NUM_ENEMIES_CHANNEL_1 = 12098 + (7 * MAP_WIDTH)  + (29 * MAP_HEIGHT);
+		
+		int crazyOffset = (7 * (MAP_WIDTH + (29 * (MAP_HEIGHT))));
+		
+		// maybe use current round too ?
+		
+		NUM_ENEMIES_CHANNEL_1 = 938 + crazyOffset;
 		NUM_ENEMIES_CHANNEL_1 %= GameConstants.BROADCAST_MAX_CHANNELS;
 		
-	    NUM_ENEMIES_CHANNEL_2 = 21987 + (7 * MAP_WIDTH)  + (29 * MAP_HEIGHT);
+	    NUM_ENEMIES_CHANNEL_2 = 4187 + crazyOffset;
 	    NUM_ENEMIES_CHANNEL_2 %= GameConstants.BROADCAST_MAX_CHANNELS;
-	    
-		NUM_ENEMIES_CHANNEL_3 = 31045 + (7 * MAP_WIDTH)  + (29 * MAP_HEIGHT);
-		NUM_ENEMIES_CHANNEL_3 %= GameConstants.BROADCAST_MAX_CHANNELS;
+		
+		STOP_NUKE_CHANNEL_1 = 543 + crazyOffset;
+		STOP_NUKE_CHANNEL_1 %= GameConstants.BROADCAST_MAX_CHANNELS;
+		
+		STOP_NUKE_CHANNEL_2 = 1897 + crazyOffset;
+		STOP_NUKE_CHANNEL_2 %= GameConstants.BROADCAST_MAX_CHANNELS;	
 	}
 	
-
 	// System.setProperty("debugMethodsEnabled", "true");
 	// use bc.conf to turn debug mode on	
 	private static void debug_printf(String format, Object ... objects) {
@@ -125,6 +138,15 @@ public class RobotPlayer {
 	private static void playOneTurn_hq(RobotController rc) {
 		double power = rc.getTeamPower();
 
+		// check if the enemy is building a nuke... sometimes
+		try {
+			if (!SHOULD_STOP_NUKE && rc.senseEnemyNukeHalfDone()) {
+				tryBroadcastAttackSignal(rc);
+			}
+		} catch (GameActionException e) {
+			debug_printf(e);
+		}
+		
 		// try to spawn a soldier
 
 		if (power >= MIN_TEAM_POWER) {
@@ -144,14 +166,23 @@ public class RobotPlayer {
 		}
 	}	
 
+	private static void tryBroadcastAttackSignal(RobotController rc) {
+		if (rc.getTeamPower() > (2 * MIN_POWER_TO_SEND_BROADCAST)) {
+			trySendMessage(rc, STOP_NUKE_CHANNEL_1, STOP_NUKE_MAGIC_NUMBER);
+			trySendMessage(rc, STOP_NUKE_CHANNEL_2, STOP_NUKE_MAGIC_NUMBER);
+			SHOULD_STOP_NUKE = true;
+			debug_printf("TOLD OTHERS TO STOP NUKE");
+		}		
+	}
+
 	private static Upgrade findBestUpgrade(RobotController rc) {
 		Upgrade bestUpgrade = Upgrade.NUKE;
 
 		Upgrade upgradePriorities[] = new Upgrade[]{
-				Upgrade.FUSION, // assume FUSION is the best upgrade?
+				Upgrade.DEFUSION,
 				Upgrade.VISION,
 				Upgrade.PICKAXE,
-				Upgrade.DEFUSION,
+				Upgrade.FUSION,
 				Upgrade.NUKE
 		};
 
@@ -202,7 +233,7 @@ public class RobotPlayer {
 		Robot nearbyEnemyRobots[] = getNearbyEnemies(rc);
 		
 		Team myTeam = MY_TEAM;
-		
+				
 		// this wastes power, so don't do it all the time
 		if (Clock.getRoundNum() % 5 == 0) {
 			if (nearbyEnemyRobots.length > 0) {
@@ -210,6 +241,10 @@ public class RobotPlayer {
 			}
 			// decay
 			decreaseNumEnemiesSeenRecently(rc, 1);
+			
+			if (!SHOULD_STOP_NUKE) {
+				checkIfShouldStopNuke(rc);
+			}
 		}
 		
 		Robot nearbyFriendlyRobots[] = getNearbyFriendlies(rc);
@@ -221,12 +256,12 @@ public class RobotPlayer {
 		boolean shouldCounterAttack = numEnemiesSeenRecently >= NUM_ENEMIES_SEEN_RECENTLY_ATTACK_HQ_THRESHOLD &&
 									  numFriendlyRobots > MIN_NUM_FRIENDLIES_ALIVE_ATTACK_THRESHOLD;
 									  
-		debug_printf("round %d: %s, %d enemies, %d friendlies\n", Clock.getRoundNum(), shouldCounterAttack,  numEnemiesSeenRecently, numFriendlyRobots);
+		// debug_printf("round %d: %s, %d enemies, %d friendlies\n", Clock.getRoundNum(), shouldCounterAttack,  numEnemiesSeenRecently, numFriendlyRobots);
 		
 		boolean shouldKamikaze = allFriendlyRobots.length > BIG_NUM_FRIENDLIES_ALIVE_ATTACK_THRESHOLD ||
 				 				   Clock.getRoundNum() >= ROUND_NUM_SELF_DESTRUCT;
 		
-		boolean shouldAttackHQ = shouldCounterAttack || shouldKamikaze;
+		boolean shouldAttackHQ = SHOULD_STOP_NUKE || shouldCounterAttack || shouldKamikaze;
 				 				   
 		boolean shouldExplore = Math.random() < 0.05;
 				
@@ -234,27 +269,35 @@ public class RobotPlayer {
 							 nearbyFriendlyRobots.length > 1 ||
 							 shouldAttackHQ ||
 							 shouldExplore;	
-
-		// try to defuse enemy mine
 							 
-		MapLocation mineLocations[] = rc.senseNonAlliedMineLocations(myLocation, SMALL_RADIUS);
-		for (MapLocation mineLocation : mineLocations) {
-			if (couldDefuseMine(rc, mineLocation)) {
-				return;
-			}				
+		List<Direction> prioritisedDirections = getPrioritisedDirections(rc, myLocation, myTeam, shouldAttackHQ);
+		
+		MapLocation preferredNewLocation = myLocation.add(prioritisedDirections.get(0));
+		Team newLocationMineStatus = rc.senseMine(preferredNewLocation);
+		boolean enemyMineAtNewLocation = (newLocationMineStatus != null && newLocationMineStatus != MY_TEAM);
+		boolean bestDirectionIsThroughMinefield = enemyMineAtNewLocation && (Math.random() < 0.60);
+		
+		// if we would _probably_ prefer to walk through a minefield
+		// or we are not supposed to be attacking the HQ
+		// then try to defuse a nearby mine
+		if (bestDirectionIsThroughMinefield || !shouldAttackHQ) {
+			MapLocation mineLocations[] = rc.senseNonAlliedMineLocations(myLocation, SMALL_RADIUS);
+			for (MapLocation mineLocation : mineLocations) {
+				if (couldDefuseMine(rc, mineLocation)) {
+					return;
+				}				
+			}
 		}
 							 
 		// try to move						 
 							 
 		if (shouldMove) {
-			
-			Direction direction = findBestDirectionToMove(rc, myLocation, myTeam, nearbyEnemyRobots, shouldAttackHQ);
-
+			Direction direction = findBestDirectionToMove(rc, myLocation, myTeam, nearbyEnemyRobots, shouldAttackHQ, prioritisedDirections);					 
 			if (direction != null) {
 				if (couldMove(rc, direction)) {
 					return;
 				}
-			}			
+			}
 		}
 		
 
@@ -288,6 +331,22 @@ public class RobotPlayer {
 		} 	
 
 	}	
+
+	private static void checkIfShouldStopNuke(RobotController rc) {
+		if (rc.getTeamPower() > (2 * MIN_POWER_TO_READ_BROADCAST)) {
+			int message1 = tryGetMessage(rc, STOP_NUKE_CHANNEL_1);
+			int message2 = tryGetMessage(rc, STOP_NUKE_CHANNEL_2);
+			
+			if (message1 == message2 && message2 == STOP_NUKE_MAGIC_NUMBER) {
+				SHOULD_STOP_NUKE = true;
+			}
+		}		
+		
+		if (Math.random() > (Clock.getRoundNum() / 150.0)) {
+			// build scouts at start of game
+			SHOULD_STOP_NUKE = true;
+		}
+	}
 
 	private static boolean couldDefuseMine(RobotController rc, MapLocation location) {
 		boolean defused = false;
@@ -354,17 +413,17 @@ public class RobotPlayer {
 		return moved;
 	}
 
-	private static Direction findBestDirectionToMove(RobotController rc, MapLocation myLocation, Team myTeam, Robot nearbyEnemyRobots[], boolean shouldAttackHQ) {
+	private static Direction findBestDirectionToMove(RobotController rc, MapLocation myLocation, Team myTeam, Robot nearbyEnemyRobots[], boolean shouldAttackHQ, List<Direction> prioritisedDirections) {
 		Direction bestDirection = null;
-
-		List<Direction> prioritisedDirections = getPrioritisedDirections(rc, myLocation, myTeam, shouldAttackHQ);
 
 		for (Direction direction: prioritisedDirections) {
 			// causes exception
 			if (direction != Direction.OMNI && direction != Direction.NONE) {
 				MapLocation newLocation = myLocation.add(direction);
 				Team mineTeam = rc.senseMine(newLocation);
+				
 				boolean safeDirection = (mineTeam == null || mineTeam == myTeam);
+				
 				if (safeDirection && rc.canMove(direction)) {
 					bestDirection = direction;
 					break;
@@ -378,12 +437,11 @@ public class RobotPlayer {
 	private static int getNumEnemiesSeenRecently(RobotController rc) {	
 		int numEnemies = 0;
 		
-		if (rc.getTeamPower() > (3 * MIN_POWER_TO_READ_BROADCAST)) {
+		if (rc.getTeamPower() > (2 * MIN_POWER_TO_READ_BROADCAST)) {
 			int message1 = tryGetMessage(rc, NUM_ENEMIES_CHANNEL_1);
 			int message2 = tryGetMessage(rc, NUM_ENEMIES_CHANNEL_2);
-			int message3 = tryGetMessage(rc, NUM_ENEMIES_CHANNEL_3);
 			
-			if (message1 == message2 && message2 == message3) {
+			if (message1 == message2) {
 				numEnemies = message1;
 			}
 		}
@@ -392,19 +450,18 @@ public class RobotPlayer {
 	}
 	
 	private static void increaseNumEnemiesSeenRecently(RobotController rc, int amount) {
-		if (rc.getTeamPower() > (3 * MIN_POWER_TO_SEND_BROADCAST) + (3 * MIN_POWER_TO_READ_BROADCAST)) {
+		if (rc.getTeamPower() > (2 * MIN_POWER_TO_SEND_BROADCAST) + (2 * MIN_POWER_TO_READ_BROADCAST)) {
 			
 			int numEnemies = getNumEnemiesSeenRecently(rc);
 			numEnemies += amount;
 			
 			trySendMessage(rc, NUM_ENEMIES_CHANNEL_1, numEnemies);
 			trySendMessage(rc, NUM_ENEMIES_CHANNEL_2, numEnemies);
-			trySendMessage(rc, NUM_ENEMIES_CHANNEL_3, numEnemies);
 		}
 	}
 	
 	private static void decreaseNumEnemiesSeenRecently(RobotController rc, int amount) {
-		if (rc.getTeamPower() > (3 * MIN_POWER_TO_SEND_BROADCAST) + (3 * MIN_POWER_TO_READ_BROADCAST)) {
+		if (rc.getTeamPower() > (2 * MIN_POWER_TO_SEND_BROADCAST) + (2 * MIN_POWER_TO_READ_BROADCAST)) {
 			int numEnemies = getNumEnemiesSeenRecently(rc);
 			numEnemies -= amount;
 			
@@ -414,7 +471,6 @@ public class RobotPlayer {
 			
 			trySendMessage(rc, NUM_ENEMIES_CHANNEL_1, numEnemies);
 			trySendMessage(rc, NUM_ENEMIES_CHANNEL_2, numEnemies);
-			trySendMessage(rc, NUM_ENEMIES_CHANNEL_3, numEnemies);
 		}
 	}		
 	
@@ -442,12 +498,33 @@ public class RobotPlayer {
 		final Robot nearbyEnemies[] = getNearbyEnemies(rc);
 		final MapLocation enemyHQLocation = rc.senseEnemyHQLocation();
 	
+		MapLocation mineLocations[] = rc.senseNonAlliedMineLocations(myLocation, HUGE_RADIUS);
+		
 		if (nearbyEnemies.length > 0) {	
 
 			// if there are nearby enemy, go towards them
 			
+			final Map<Direction,Double> cachedDistances = new HashMap<Direction,Double>();
+			for (Direction direction: directions) {
+				MapLocation newLocation = myLocation.add(direction);
+				double shortestDistance = -1;
+
+				for (Robot robot: nearbyEnemies) {
+					double distance = -1;
+					try {
+						distance = newLocation.distanceSquaredTo(rc.senseLocationOf(robot));
+					} catch (GameActionException e) {
+						debug_printf(e);
+					}
+					if (shortestDistance == -1 || distance < shortestDistance) {
+						shortestDistance = distance;
+					}
+				}
+				shortestDistance += numMinesAlongDirection(rc, newLocation, direction, mineLocations);
+				cachedDistances.put(direction, shortestDistance);
+			}			
+			
 			// sort based on distance to enemy
-			// TODO: more efficient sort
 			Collections.sort(directions, new Comparator<Direction>() {
 				@Override
 				public int compare(Direction o1, Direction o2) {
@@ -457,29 +534,23 @@ public class RobotPlayer {
 				}
 				
 				private double distanceToNearbyEnemy(Direction direction) {
-					MapLocation newLocation = myLocation.add(direction);
-					double shortestDistance = -1;
-
-					for (Robot robot: nearbyEnemies) {
-						double distance = -1;
-						try {
-							distance = newLocation.distanceSquaredTo(rc.senseLocationOf(robot));
-						} catch (GameActionException e) {
-							debug_printf(e);
-						}
-						if (shortestDistance == -1 || distance < shortestDistance) {
-							shortestDistance = distance;
-						}
-					}
-
-					return shortestDistance;
+					return cachedDistances.get(direction);
 				}
 			});
 			
 		} else if (shouldAttackHQ) {
 			
 			// head to enemy HQ
-			// TODO: more efficient sort
+			
+			final Map<Direction,Double> cachedDistances = new HashMap<Direction,Double>();
+			for (Direction direction: directions) {
+				MapLocation newLocation = myLocation.add(direction);
+				double distance = newLocation.distanceSquaredTo(enemyHQLocation);
+				distance += numMinesAlongDirection(rc, newLocation, direction, mineLocations);
+				cachedDistances.put(direction, distance);
+			}
+			
+			// sort based on distance to enemy HQ
 			Collections.sort(directions, new Comparator<Direction>() {
 				@Override
 				public int compare(Direction o1, Direction o2) {
@@ -489,9 +560,7 @@ public class RobotPlayer {
 				}
 				
 				private double distanceToEnemyHQ(Direction direction) {
-					MapLocation newLocation = myLocation.add(direction);
-					double distance = newLocation.distanceSquaredTo(enemyHQLocation);
-					return distance;
+					return cachedDistances.get(direction);
 				}
 			});
 			
@@ -501,6 +570,60 @@ public class RobotPlayer {
 		}
 
 		return directions;
+	}
+
+	private static double numMinesAlongDirection(RobotController rc, MapLocation location, Direction direction, MapLocation mineLocations[]) {
+		// heuristic to estimate how difficult a direction is to traverse
+		
+		int minesInThisDirection = 0;
+		
+		// simplify direction
+		switch(direction) {
+			case NORTH_EAST:
+				direction = Direction.NORTH;
+				break;
+			case NORTH_WEST:
+				direction = Direction.NORTH;
+				break;
+			case SOUTH_EAST:
+				direction = Direction.SOUTH;
+				break;
+			case SOUTH_WEST:
+				direction = Direction.SOUTH;
+				break;
+		}
+		
+		// checking all the mines is very expensive
+		for (int minesChecked = 0; minesChecked < 10; minesChecked++) {
+			MapLocation mineLocation = mineLocations[(int)(Math.random() * mineLocations.length)];
+			switch(direction) {
+				case NORTH:
+					if (mineLocation.x == location.x && mineLocation.y < location.y) {
+						minesInThisDirection++;
+					}
+					break;
+				case SOUTH:
+					if (mineLocation.x == location.x && mineLocation.y > location.y) {
+						minesInThisDirection++;
+					}					
+					break;
+				case EAST:
+					if (mineLocation.x > location.x && mineLocation.y == location.y) {
+						minesInThisDirection++;
+					}					
+					break;
+				case WEST:
+					if (mineLocation.x < location.x && mineLocation.y == location.y) {
+						minesInThisDirection++;
+					}					
+					break;
+				default:
+					break;
+			}			
+		}
+		
+		int MAGIC_MINE_MULTIPLIER = 15;
+		return minesInThisDirection * MAGIC_MINE_MULTIPLIER;
 	}
 
 	private static Robot[] getAllEnemies(RobotController rc) {
