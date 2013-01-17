@@ -19,7 +19,7 @@ public class RobotPlayer {
 	private final static double MIN_TEAM_POWER = 60.0;
 	private final static int SENSE_ENEMY_RADIUS = 120;
 	private final static int SENSE_FRIENDLY_RADIUS = 1;
-	
+
 	public static void run(RobotController rc) {
 		while(true) {
 			try {
@@ -37,7 +37,7 @@ public class RobotPlayer {
 		System.out.printf(format, objects);
 		System.out.printf("\n");
 	}	
-	
+
 	private static void debug_printf(Exception e) {
 		System.out.printf("%s: %s", e.getStackTrace()[0].getMethodName(), e.getMessage());
 		System.out.printf("\n");
@@ -73,18 +73,18 @@ public class RobotPlayer {
 
 	private static void playOneTurn_hq(RobotController rc) {
 		double power = rc.getTeamPower();
-				
+
 		// try to spawn a soldier
-				
+
 		if (power > MIN_TEAM_POWER) {
 			Direction spawnDirection = findBestSpawnDirection(rc);
 			if (spawnDirection != Direction.NONE && couldSpawnSoldier(rc, spawnDirection)) {
 				return;
 			}
 		}
-		
+
 		// try to do research
-		
+
 		Upgrade bestUpgrade = findBestUpgrade(rc);
 		try {
 			rc.researchUpgrade(bestUpgrade);
@@ -92,10 +92,10 @@ public class RobotPlayer {
 			debug_printf(e);
 		}
 	}	
-	
+
 	private static Upgrade findBestUpgrade(RobotController rc) {
 		Upgrade bestUpgrade = Upgrade.NUKE;
-		
+
 		Upgrade upgradePriorities[] = new Upgrade[]{
 				Upgrade.FUSION, // assume FUSION is the best upgrade?
 				Upgrade.VISION,
@@ -103,15 +103,9 @@ public class RobotPlayer {
 				Upgrade.DEFUSION,
 				Upgrade.NUKE
 		};
-		
+
 		for (Upgrade upgrade: upgradePriorities) {
-			int numRounds = 0;
-			try {
-				numRounds = rc.checkResearchProgress(upgrade);
-			} catch (GameActionException e) {
-				debug_printf(e);
-			}
-			if (numRounds < upgrade.numRounds) {
+			if (!rc.hasUpgrade(upgrade)) {
 				bestUpgrade = upgrade;
 				break;
 			}
@@ -122,7 +116,7 @@ public class RobotPlayer {
 	private static Direction findBestSpawnDirection(RobotController rc) {
 		Direction bestDirection = Direction.NONE;
 		MapLocation currentLocation = rc.getLocation();
-		
+
 		for (Direction direction : Direction.values()) {
 			MapLocation newLocation = currentLocation.add(direction);
 			GameObject gameObject = null;
@@ -138,7 +132,7 @@ public class RobotPlayer {
 		}
 		return bestDirection;
 	}
-	
+
 	private static boolean couldSpawnSoldier(RobotController rc, Direction direction) {
 		boolean spawned = false;
 		try {
@@ -153,11 +147,12 @@ public class RobotPlayer {
 
 	private static void playOneTurn_soldier(RobotController rc) {
 		MapLocation myLocation = rc.getLocation();		
-		
-		Direction direction = findBestDirectionToMove(rc, myLocation);
+		Team myTeam = rc.getTeam();
+
+		Direction direction = findBestDirectionToMove(rc, myLocation, myTeam);
 
 		// try to build encampments
-		
+
 		if (rc.senseEncampmentSquare(myLocation)) {
 			RobotType encampmentTypes[] = new RobotType[]{
 					RobotType.MEDBAY, // assume medbay is the best
@@ -167,34 +162,46 @@ public class RobotPlayer {
 					RobotType.SUPPLIER
 			};
 			for (RobotType encampmentType: encampmentTypes) {
-				if (shouldBuildEncampment(rc, encampmentType, myLocation) && couldBuildEncampment(rc, encampmentType)) {
+				if (shouldBuildEncampment(rc, encampmentType, myLocation, myTeam) && couldBuildEncampment(rc, encampmentType)) {
 					return;
 				}				
 			}
 		}	
-		
+
 		// try to plant a mine
-		
+
 		if (rc.senseMine(myLocation) == null) {
 			if (couldLayMine(rc)) {
 				return;
 			}
 		}		
-		
+
 		// try to move
-		
+
 		if (direction != null) {
 			if (couldMove(rc, direction)) {
 				return;
 			}
 		}
-		
+
 		// TODO: should try to defuse, etc
 	}	
-	
-	private static boolean shouldBuildEncampment(RobotController rc, RobotType encampmentType, MapLocation myLocation) {
-		// TODO: better logic to figure out when to build
-		return true;
+
+	private static boolean shouldBuildEncampment(RobotController rc, RobotType encampmentType, MapLocation location, Team team) {		
+		boolean shouldBuild = false;
+
+		MapLocation encampmentSquares[] = {};
+		try {
+			encampmentSquares = rc.senseEncampmentSquares(location, 2, team);
+		} catch (GameActionException e) {
+			debug_printf(e);
+		}
+
+		if (encampmentSquares.length == 0) {
+			shouldBuild = true;
+		}
+
+		return shouldBuild;
 	}
 
 	private static boolean couldBuildEncampment(RobotController rc, RobotType encampmentType) {
@@ -232,17 +239,16 @@ public class RobotPlayer {
 		}
 		return moved;
 	}
-	
-	private static Direction findBestDirectionToMove(RobotController rc, MapLocation myLocation) {
+
+	private static Direction findBestDirectionToMove(RobotController rc, MapLocation myLocation, Team myTeam) {
 		Direction bestDirection = null;
-		Team myTeam = rc.getTeam();
-		
+
 		Robot enemyRobots[] = getNearbyEnemies(rc);
 		Robot friendlyRobots[] = getNearbyFriendlies(rc);
-		
+
 		if (enemyRobots.length > 1 || friendlyRobots.length > 1) {
 			List<Direction> prioritisedDirections = getPrioritisedDirections(rc);
-			
+
 			for (Direction direction: prioritisedDirections) {
 				// causes exception
 				if (direction != Direction.OMNI && direction != Direction.NONE) {
@@ -258,18 +264,18 @@ public class RobotPlayer {
 		}
 		return bestDirection;
 	}
-	
+
 	private static List<Direction> getPrioritisedDirections(final RobotController rc) {
-		
+
 		List<Direction> directions = Arrays.asList(Direction.values());
-		
+
 		final Robot nearbyEnemies[] = getNearbyEnemies(rc);
-		
+
 		// if there are nearby enemy, go towards them
 		if (nearbyEnemies.length > 0) {
 			debug_printf("NEARBY ENEMIES");
 			final MapLocation myLocation = rc.getLocation();
-			
+
 			// sort based on distance to enemy
 			// TODO: this is a really inefficient way of sorting
 			Collections.sort(directions, new Comparator<Direction>() {
@@ -282,7 +288,7 @@ public class RobotPlayer {
 				private double distanceToEnemy(Direction direction) {
 					MapLocation newLocation = myLocation.add(direction);
 					double shortestDistance = -1;
-					
+
 					for (Robot robot: nearbyEnemies) {
 						double distance = -1;
 						try {
@@ -294,25 +300,25 @@ public class RobotPlayer {
 							shortestDistance = distance;
 						}
 					}
-					
+
 					return shortestDistance;
 				}
 			});
 			debug_printf(directions.toString());
-			
+
 		} else {			
 			// otherwise move randomly
 			Collections.shuffle(directions);
 		}
-	
+
 		return directions;
 	}
-	
+
 	private static Robot[] getNearbyEnemies(RobotController rc) {
 		Team otherTeam = rc.getTeam().opponent();
 		return rc.senseNearbyGameObjects(Robot.class, SENSE_ENEMY_RADIUS, otherTeam);
 	}
-	
+
 	private static Robot[] getNearbyFriendlies(RobotController rc) {
 		Team myTeam = rc.getTeam();
 		return rc.senseNearbyGameObjects(Robot.class, SENSE_FRIENDLY_RADIUS, myTeam);
