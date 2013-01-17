@@ -31,9 +31,9 @@ public class RobotPlayer {
 	
 	// TODO: calculate these dynamically maybe based on the X and Y starting positions? map width and height?
 	// TODO: also, this isn't the best idea for oc002 vs oc002 (shared channels)
-	private final static int NUM_ENEMIES_CHANNEL_1 = 12098;
-	private final static int NUM_ENEMIES_CHANNEL_2 = 21987;
-	private final static int NUM_ENEMIES_CHANNEL_3 = 31045;
+	private static int NUM_ENEMIES_CHANNEL_1;
+	private static int NUM_ENEMIES_CHANNEL_2;
+	private static int NUM_ENEMIES_CHANNEL_3;
 
 	private final static int NUM_ENEMIES_SEEN_RECENTLY_ATTACK_HQ_THRESHOLD = 20;
 	private final static int MIN_NUM_FRIENDLIES_ALIVE_ATTACK_THRESHOLD = 20;
@@ -42,7 +42,15 @@ public class RobotPlayer {
 	private final static double MIN_POWER_TO_READ_BROADCAST = GameConstants.BROADCAST_READ_COST * 2;
 	private final static double MIN_POWER_TO_SEND_BROADCAST = GameConstants.BROADCAST_SEND_COST * 2;
 	
+	// caching
+	private static Team MY_TEAM;
+	private static Team OPPOSING_TEAM;
+	private static int MAP_WIDTH;
+	private static int MAP_HEIGHT;
+	
 	public static void run(RobotController rc) {
+		initialise(rc);
+		
 		while(true) {
 			try {
 				playOneTurn(rc);
@@ -52,6 +60,27 @@ public class RobotPlayer {
 			}
 		}
 	}
+	
+	private static void initialise(RobotController rc) {
+		MY_TEAM = rc.getTeam();
+		OPPOSING_TEAM = MY_TEAM.opponent();
+		MAP_WIDTH = rc.getMapWidth();
+		MAP_HEIGHT = rc.getMapHeight();
+		
+		pickChannels(rc);
+	}
+	
+	private static void pickChannels(RobotController rc) {		
+		NUM_ENEMIES_CHANNEL_1 = 12098 + (7 * MAP_WIDTH)  + (29 * MAP_HEIGHT);
+		NUM_ENEMIES_CHANNEL_1 %= GameConstants.BROADCAST_MAX_CHANNELS;
+		
+	    NUM_ENEMIES_CHANNEL_2 = 21987 + (7 * MAP_WIDTH)  + (29 * MAP_HEIGHT);
+	    NUM_ENEMIES_CHANNEL_2 %= GameConstants.BROADCAST_MAX_CHANNELS;
+	    
+		NUM_ENEMIES_CHANNEL_3 = 31045 + (7 * MAP_WIDTH)  + (29 * MAP_HEIGHT);
+		NUM_ENEMIES_CHANNEL_3 %= GameConstants.BROADCAST_MAX_CHANNELS;
+	}
+	
 
 	// System.setProperty("debugMethodsEnabled", "true");
 	// use bc.conf to turn debug mode on	
@@ -169,9 +198,10 @@ public class RobotPlayer {
 
 	private static void playOneTurn_soldier(RobotController rc) {
 		MapLocation myLocation = rc.getLocation();		
-		Team myTeam = rc.getTeam();
 	
 		Robot nearbyEnemyRobots[] = getNearbyEnemies(rc);
+		
+		Team myTeam = MY_TEAM;
 		
 		// this wastes power, so don't do it all the time
 		if (Clock.getRoundNum() % 5 == 0) {
@@ -482,8 +512,7 @@ public class RobotPlayer {
 	}
 	
 	private static Robot[] getNearbyEnemies(RobotController rc, int radius) {
-		Team otherTeam = rc.getTeam().opponent();
-		return rc.senseNearbyGameObjects(Robot.class, radius, otherTeam);
+		return rc.senseNearbyGameObjects(Robot.class, radius, OPPOSING_TEAM);
 	}
 	
 	private static Robot[] getAllFriendlies(RobotController rc) {
@@ -495,8 +524,7 @@ public class RobotPlayer {
 	}	
 	
 	private static Robot[] getNearbyFriendlies(RobotController rc, int radius) {
-		Team myTeam = rc.getTeam();
-		return rc.senseNearbyGameObjects(Robot.class, radius, myTeam);
+		return rc.senseNearbyGameObjects(Robot.class, radius);
 	}	
 
 	private static void playOneTurn_artillery(RobotController rc) {
@@ -504,19 +532,19 @@ public class RobotPlayer {
 	}	
 	
 	private static void playOneTurn_shields(RobotController rc) {
-		// no action possible	
+		// no action possible (besides suicide?)	
 	}
 
 	private static void playOneTurn_medbay(RobotController rc) {
-		// no action possible
+		// no action possible (besides suicide?)
 	}
 
 	private static void playOneTurn_generator(RobotController rc) {
-		// no action possible
+		// no action possible (besides suicide?)
 	}
 
 	private static void playOneTurn_supplier(RobotController rc) {
-		// no action possible
+		// no action possible (besides suicide?)
 	}	
 }
 
