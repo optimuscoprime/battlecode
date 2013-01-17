@@ -2,6 +2,7 @@ package sc0011;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
+import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
@@ -269,21 +270,43 @@ public class RobotPlayer {
     }
 
     public static void setRobotTask(RobotController rc, int robot_id, int task) throws Exception {	
-	rc.broadcast(HASH1 * robot_id, task * HASH3);
-	rc.broadcast(HASH2 * robot_id, task * HASH1);
-	rc.broadcast(HASH3 * robot_id, task * HASH2);	
+    	trySendBroadcast(rc, HASH1 * robot_id, task * HASH3);
+    	trySendBroadcast(rc, HASH2 * robot_id, task * HASH1);
+    	trySendBroadcast(rc, HASH3 * robot_id, task * HASH2);	
     }
 
     public static int getRobotTask(RobotController rc, int robot_id) throws Exception {		
-	int val1 = rc.readBroadcast(robot_id * HASH1) / HASH3;
-	int val2 = rc.readBroadcast(robot_id * HASH2) / HASH1;
-	int val3 = rc.readBroadcast(robot_id * HASH3) / HASH2;
+	int val1 = tryReadBroadcast(rc, robot_id * HASH1) / HASH3;
+	int val2 = tryReadBroadcast(rc, robot_id * HASH2) / HASH1;
+	int val3 = tryReadBroadcast(rc, robot_id * HASH3) / HASH2;
 
 	if (val1 == val2) return val1;
 	if (val1 == val3) return val1;
 	if (val2 == val3) return val2;
 	
 	return ROBOT_TASK_ERROR;
+    }
+    
+    private static void trySendBroadcast(RobotController rc, int channel, int message) {
+    	if (channel >= 0 && channel < GameConstants.BROADCAST_MAX_CHANNELS) {
+    		try {
+				rc.broadcast(channel, message);
+			} catch (GameActionException e) {
+				e.printStackTrace();
+			}
+    	}
+    }
+    
+    private static int tryReadBroadcast(RobotController rc, int channel) {
+    	int broadcast = 0;
+    	if (channel >= 0 && channel < GameConstants.BROADCAST_MAX_CHANNELS) {
+    		try {
+				broadcast = rc.readBroadcast(channel);
+			} catch (GameActionException e) {
+				e.printStackTrace();
+			}
+    	}
+    	return broadcast;
     }
     
 }
