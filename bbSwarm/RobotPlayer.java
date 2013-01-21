@@ -434,7 +434,6 @@ public class RobotPlayer{
 
    private static void scoutCode(){
       MapLocation myLoc = rc.getLocation();
-      System.out.println("I'm a scout!");
       while(true){
          try{
 
