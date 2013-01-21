@@ -1,16 +1,29 @@
 package bb_panzy;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameConstants;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotType;
-import battlecode.common.Upgrade;
-import battlecode.common.Team;
+import battlecode.common.Clock; import battlecode.common.Direction; import
+battlecode.common.GameConstants; import battlecode.common.MapLocation; import
+battlecode.common.RobotController; import battlecode.common.RobotType; import
+battlecode.common.Robot; import battlecode.common.Upgrade; import
+battlecode.common.Team;
 
 public class RobotPlayer {
+   private final static int COMBAT_SUPERIORITY =4;
+   private final static int CLOSE_RANGE =10;
+   private final static int DEFAULT_SENSE_FIGHT_RADIUS =20;
+   // radius is a squared number i.e. 16=dist 4 ?
+   // caching - each player gets its own private variables?
+   private static Team MY_TEAM;
+   private static Team OPPOSING_TEAM;
+   private static int MAP_WIDTH;
+   private static int MAP_HEIGHT;
+   private static boolean SHOULD_STOP_NUKE = false;
+   private static int numEnemiesSeen = 0;
+   private static MapLocation enemyHQloc;
+   private static MapLocation myHQloc; 
+
+
    public static void run(RobotController rc) {
+      initialise(rc);
       while (true) {
          try {
             if (rc.getType() == RobotType.HQ) {
@@ -19,17 +32,8 @@ public class RobotPlayer {
                ArtilleryPlayer(rc);
             } else if (rc.getType() == RobotType.SOLDIER) {		    
 
-
-               //  int task = getRobotTask(rc, rc.getRobot().getID());
-
-               //if (task == ROBOT_TASK_UNKNOWN) {
-               //	setRobotTask(rc, rc.getRobot().getID(), ROBOT_TASK_SCOUT);
-
                if(Clock.getRoundNum() < 50){
-                  //}else if(numGuards > 6)
-                  //    } else if (task == ROBOT_TASK_ERROR) {
                   ScoutSldr(rc);
-               //  }
                }else{
                   avgSldr(rc);
                }
@@ -42,6 +46,37 @@ public class RobotPlayer {
          }
       }
    }
+   private static void initialise(RobotController rc) {
+      MY_TEAM = rc.getTeam();
+      OPPOSING_TEAM = MY_TEAM.opponent();
+      MAP_WIDTH = rc.getMapWidth();
+      MAP_HEIGHT = rc.getMapHeight();
+      enemyHQloc= rc.senseEnemyHQLocation();
+      myHQloc = rc.senseHQLocation();
+
+   }
+   private static Robot[] getNearbyEnemies(RobotController rc, int radius) {
+      return rc.senseNearbyGameObjects(Robot.class, radius, OPPOSING_TEAM);
+   }
+   private static Robot[] getNearbyFriendlies(RobotController rc, int radius) {
+      return rc.senseNearbyGameObjects(Robot.class, radius, MY_TEAM);
+   }
+   private static MapLocation getNearbyMedbay(RobotController rc, int radius) throws Exception{
+      MapLocation nearestMedbay= null;
+      MapLocation[] nearEncamps=
+      rc.senseEncampmentSquares(rc.getLocation(),radius, MY_TEAM);
+      int nearest_dist=10000;
+      for(int i=0; i < nearEncamps.length; i++){
+         if(rc.getLocation().distanceSquaredTo(nearEncamps[i]) < nearest_dist){
+            //&&  #FIXME - use radio or something to find where medbays are
+         //(rc.senseRobotInfo(rc.senseObjectAtLocation(nearEncamps[i])).type == RobotType.MEDBAY)){
+            nearest_dist=rc.getLocation().distanceSquaredTo(nearEncamps[i]);
+            nearestMedbay=nearEncamps[i];
+         }
+      }
+      return nearestMedbay;
+   }
+
 
    public static void HQPlayer(RobotController rc) throws Exception {
       if (rc.isActive()) {
@@ -65,9 +100,6 @@ public class RobotPlayer {
 
          }
       }
-      //if (Clock.getRoundNum() % 100 == 0) {
-      //MapLocation [] rc.senseNonAlliedMineLocations(new MapLocation(35, 35), 35);
-      //}
 
    }
    public static void ArtilleryPlayer(RobotController rc) throws Exception {
@@ -90,12 +122,17 @@ public class RobotPlayer {
         // aim to move directly towards target
         Direction dir = rc.getLocation().directionTo(location_x);
         MapLocation location_in_dir = rc.getLocation().add(dir);
-
-        if (rc.canMove(dir)) {
-            if (rc.senseMine(location_in_dir) == null) {
-                rc.move(dir);
-                return;
-            }
+         if (dir != Direction.OMNI && dir != Direction.NONE) {
+         //the above avoids the exception
+           if (rc.canMove(dir)) {
+              if (rc.senseMine(location_in_dir) == null) {
+                 rc.move(dir);
+                 return;
+              }
+           }
+        }else{
+            rc.yield();
+            return;
         }
 
         // but also give yourself a few options if you can't move where you want
@@ -167,8 +204,7 @@ public class RobotPlayer {
 	/// MapLocation[] senseNonAlliedMineLocations(MapLocation center, int radiusSquared)
 		    
        if (rc.isActive()) {
-          MapLocation enemy_hq = rc.senseEnemyHQLocation();
-          moveToward(rc, enemy_hq);
+          moveToward(rc, enemyHQloc);
        }	
     }
 
@@ -179,49 +215,80 @@ public class RobotPlayer {
        if (rc.isActive()) {
           //Capture any encampments?
           if(GameConstants.CAPTURE_POWER_COST < rc.getTeamPower()){
-             MapLocation[] nearEncamps=rc.senseEncampmentSquares(rc.getLocation(),2, Team.NEUTRAL);
-             MapLocation nearest= null;
+             int searchDist=4;
+             //System.out.println("engeron: " + rc.getEnergon());
+             if(rc.getEnergon() < 30){
+                 searchDist=10;
+                 MapLocation nearbyMedbay=getNearbyMedbay(rc,30);
+                 if(nearbyMedbay!= null){
+                    moveToward(rc,nearbyMedbay);
+                 }
+             }
+             MapLocation[]
+             nearEncamps=rc.senseEncampmentSquares(rc.getLocation(),searchDist, Team.NEUTRAL);
+             MapLocation nearestEncampment= null;
              int nearest_dist=100000000;
              int capping=0;
              for(int i=0; i < nearEncamps.length; i++){
                 if(rc.getLocation().equals(nearEncamps[i]) ){ //we're ON encampment.
                    Team opponent = rc.getTeam().opponent();
 
-                   if (rc.getTeamPower() < (GameConstants.CAPTURE_POWER_COST * 5)){
-                      rc.captureEncampment(RobotType.GENERATOR);
+                   if(searchDist ==10){
+                      if(rc.isActive()){
+                         rc.captureEncampment(RobotType.MEDBAY); 
+                      }
+                      rc.yield();
+                   }else if (rc.getTeamPower() >  200){
+                      rc.captureEncampment(RobotType.SUPPLIER);
                       //   }else if( 0 < (rc.senseNearbyGameObjects(RobotType.ARTILLERY, RobotType.ARTILLERY.attackRadiusMaxSquared, opponent).length()) ){
                       //    rc.captureEncampment(RobotType.SHIELDS); //if there's artillery within range build a shield?
-                     }else if(rc.getLocation().distanceSquaredTo(rc.senseEnemyHQLocation()) <= RobotType.ARTILLERY.attackRadiusMaxSquared){
-                        rc.captureEncampment(RobotType.ARTILLERY); //if there's artillery within range build a shield?
-                     }else{
-                        rc.captureEncampment(RobotType.SUPPLIER);
-                     }
-                     capping=1;
-                     rc.yield();
-                     return; //somehow yield is broken.  Without returning will move twice error.
+                }else if(rc.getLocation().distanceSquaredTo(rc.senseEnemyHQLocation()) <= RobotType.ARTILLERY.attackRadiusMaxSquared){
+                   rc.captureEncampment(RobotType.ARTILLERY); //if there's artillery within range build a shield?
+                }else{
+                   rc.captureEncampment(RobotType.GENERATOR);
+                }
+                capping=1;
+                rc.yield();
+                return; //somehow yield is broken.  Without returning will move twice error.
                 }else{
                    if(rc.senseObjectAtLocation(nearEncamps[i])!= null ){
                       //might be me, or friendly robot?
                    }else if(rc.getLocation().distanceSquaredTo(nearEncamps[i]) < nearest_dist){
                       nearest_dist=rc.getLocation().distanceSquaredTo(nearEncamps[i]);
-                      nearest=nearEncamps[i];
+                      nearestEncampment=nearEncamps[i];
                    }
 
                 }
              }
-
-             // there was a robot there.  Maybe a friendly?
-             if(nearest != null){
-                if(rc.isActive()){
-                   moveToward(rc,nearest);
+             //is enemy outnumbered?
+             if(rc.isActive()){
+                Robot nearbyEnemyRobots[] = getNearbyEnemies(rc,DEFAULT_SENSE_FIGHT_RADIUS);
+                Robot nearbyFriendlyRobots[] = getNearbyFriendlies(rc,DEFAULT_SENSE_FIGHT_RADIUS);
+                if(nearbyEnemyRobots.length > 0){
+                   //if(nearbyEnemyRobots.length < nearbyFriendlyRobots.length){
+                   if(nearbyEnemyRobots.length < (nearbyFriendlyRobots.length/ COMBAT_SUPERIORITY)){
+                      //go for the kill
+                      moveToward(rc,rc.senseLocationOf(nearbyEnemyRobots[0]));
+                   }else{
+                      //Run away!
+                      //if(rc.getLocation().distanceSquaredTo(rc.senseLocationOf(nearbyEnemyRobots[0]))>CLOSE_RANGE ){
+                        // rc.layMine();
+                      //}else{
+                      moveToward(rc,myHQloc);
+                      //}
+                   }
                 }
-             }else{
-                if(rc.getLocation().distanceSquaredTo(rc.senseEnemyHQLocation()) > 10){
-                   MapLocation enemy_hq = rc.senseEnemyHQLocation();
-                   moveToward(rc, enemy_hq);
-                }
-                rc.yield();
              }
+             rc.yield();
+             if(rc.isActive()){
+                // there was a robot there.  Maybe a friendly?
+                if(nearestEncampment != null){
+                   moveToward(rc,nearestEncampment);
+                }else{
+                   moveToward(rc, enemyHQloc);
+                }
+             }
+             rc.yield();
              //  If(GameConstants.CAPTURE_POWER_COST < getTeamPower() 
              //  If getTeamPower() < (GameConstants.CAPTURE_POWER_COST * 5)
              // make a generator.

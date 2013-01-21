@@ -12,8 +12,8 @@ public class RobotPlayer{
 	static RobotController rc;
 	static int mult = 145;   //hopefully unique for clean comms.
 	static int status = 1;//1 is don't lay mines, 2 is lay mines
-	static int injured_health = 35;
-
+	static int injured_health = 20;
+   static int SUPERIORITY = 15;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
@@ -30,7 +30,7 @@ public class RobotPlayer{
 				}
 
 			}catch (Exception e){
-				//System.out.println("caught exception before it killed us:");
+				System.out.println("caught exception before it killed us:");
 				e.printStackTrace();
 			}
 			rc.yield();
@@ -56,11 +56,14 @@ public class RobotPlayer{
                   int medChannel=getChannel()+2;
                   MapLocation medbayLoc= IntToMaplocation(rc.readBroadcast(medChannel));
                   if(medbayLoc!= null){
-                     //System.out.println("read channel" + medChannel + "Should be going to medbayLocation!" + medbayLoc.toString() + "\n");
-                     freeGo(medbayLoc, allies,enemies,nearbyEnemies);
+                     MapLocation myLoc=rc.getLocation();
+                     Direction finalDir = myLoc.directionTo(medbayLoc);
+                     if (Math.random()<.1)
+                        finalDir = finalDir.rotateRight();
+                     simpleMove(finalDir, myLoc,true);
+                  
                   }else{
                      //head for nearest encampment. (it'll cap as medbay)
-                     //System.out.println(" nothing on channel: " + medChannel + "I better make a medbay!" +futureMedbay);
                      MapLocation futureMedbay=getNearbyMedbay(rc,50);
                      if(futureMedbay!= null){
                         freeGo(futureMedbay, allies, enemies, nearbyEnemies);
@@ -236,19 +239,31 @@ public class RobotPlayer{
 			try{
 				
 				if (rc.isActive()) {
-               int numFriendlies=rc.senseNearbyGameObjects(Robot.class,14,rc.getTeam()).length;
+               int numFriendlies=rc.senseNearbyGameObjects(Robot.class,1000,rc.getTeam()).length;
+               int numEnemies =
+               rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent()).length;
 					// Spawn a soldier
 					//			Robot[] alliedRobots = rc.senseNearbyGameObjects(Robot.class,100000,rc.getTeam());
-					if((rc.getTeamPower()-40>10) &&(numFriendlies < 20)){
+               int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*5:SUPERIORITY;
+
+					if((rc.getTeamPower()-40>10) &&(numFriendlies < (numEnemies +beGreaterBy))){
 						lookAround: for (Direction d:Direction.values()){
 							if (rc.canMove(d)){
 								rc.spawn(d);
+                        //System.out.println("friendlies" + numFriendlies + "spawning");
 								break lookAround;
 							}
 						}
 					}else if (!rc.hasUpgrade(Upgrade.PICKAXE)){
 						rc.researchUpgrade(Upgrade.PICKAXE);
+					}else if (!rc.hasUpgrade(Upgrade.DEFUSION)){
+						rc.researchUpgrade(Upgrade.DEFUSION);
+					}else if (!rc.hasUpgrade(Upgrade.FUSION)){
+						rc.researchUpgrade(Upgrade.FUSION);
+					}else if (!rc.hasUpgrade(Upgrade.NUKE)){
+						rc.researchUpgrade(Upgrade.NUKE);
 					}
+
 				}
 				
 				//move the rally point if it is a capfutureencampment
@@ -260,7 +275,7 @@ public class RobotPlayer{
 					}
 				}
 				
-				if(rc.getEnergon()<300||Clock.getRoundNum()>2000||rc.senseEnemyNukeHalfDone()){//kill enemy if nearing round limit or injured
+				if(rc.getEnergon()<300||Clock.getRoundNum()>400||rc.senseEnemyNukeHalfDone()){//kill enemy if nearing round limit or injured
 					rallyPt = enemyLoc;
 				}
 				
@@ -271,7 +286,10 @@ public class RobotPlayer{
 				rc.setIndicatorString(0,"Posted "+msg+" to "+channel);
 				
 				//message allies about whether to mine
-				if (/*rc.hasUpgrade(Upgrade.PICKAXE)*/(rc.senseNearbyGameObjects(Robot.class,1000000,rc.getTeam().opponent()).length<3)&& (Clock.getRoundNum()<150) ){
+            int nearbyEnemies=rc.senseNearbyGameObjects(Robot.class,1000000,rc.getTeam().opponent()).length;
+				if
+            ( (rc.hasUpgrade(Upgrade.PICKAXE) && (nearbyEnemies<2) )|| 
+            ( (nearbyEnemies<3)&&(Clock.getRoundNum()<150) )){
 					rc.broadcast(getChannel()+1, 2);
 				}else{
 					rc.broadcast(getChannel()+1, 1);
@@ -297,7 +315,6 @@ public class RobotPlayer{
                int medChannel = getChannel() + 2;
                int msg = MapLocationToInt(myLoc);
                rc.broadcast(medChannel, msg);
-               //System.out.println("medbay at " + myLoc );
                rc.setIndicatorString(0,"Posted "+msg+" to "+ (medChannel));
 
             }
@@ -312,8 +329,8 @@ public class RobotPlayer{
 
 	//Messaging functions
 	public static int getChannel(){
-		//int channel = (Clock.getRoundNum()*mult)%GameConstants.BROADCAST_MAX_CHANNELS;
-		int channel = (5*mult)%GameConstants.BROADCAST_MAX_CHANNELS;
+		int channel = ((Clock.getRoundNum()/5)*mult)%GameConstants.BROADCAST_MAX_CHANNELS;
+		//int channel = (5*mult)%GameConstants.BROADCAST_MAX_CHANNELS;
 		return channel;
 	}
 	public static int MapLocationToInt(MapLocation loc){
