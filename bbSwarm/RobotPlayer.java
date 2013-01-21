@@ -23,8 +23,9 @@ public class RobotPlayer{
 		while(true){
 			try{
 				if (rc.getType()==RobotType.SOLDIER){
-               if(rc.getRobot().getID()<=103){
-                  scoutCode();
+               if(rc.getRobot().getID()<=103){ //make the first few scout
+                  scoutCode();//this may finish if enemies are seen.
+                  soldierCode();
                }else{
                   soldierCode();
                }
@@ -214,7 +215,7 @@ public class RobotPlayer{
             }
          }else if(numArtilleryTargets>3){
                   rc.captureEncampment(RobotType.ARTILLERY);
-         }else if(Math.random()<.7){
+         }else if(Math.random()<.6){
 				rc.captureEncampment(RobotType.GENERATOR);
 			}else{
 				rc.captureEncampment(RobotType.SUPPLIER);
@@ -270,7 +271,7 @@ public class RobotPlayer{
                rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent()).length;
 					// Spawn a soldier
 					//			Robot[] alliedRobots = rc.senseNearbyGameObjects(Robot.class,100000,rc.getTeam());
-               int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*5:SUPERIORITY;
+               int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*3:SUPERIORITY;
 
 					if((rc.getTeamPower()-40>10) &&(numFriendlies < (numEnemies +beGreaterBy))){
 						lookAround: for (Direction d:Direction.values()){
@@ -437,7 +438,13 @@ public class RobotPlayer{
       while(true){
          try{
 
-            if (rc.isActive()) {
+            if (rc.isActive()) { 
+               
+               Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class, 25,rc.getTeam().opponent());
+               if(nearbyEnemies.length>1)
+                  return;//scouting's done.
+
+
                boolean rotating_left_on_cant_move = (Math.random() < 0.5);
 
                // aim to move directly towards enemy HQ
