@@ -14,7 +14,7 @@ public class RobotPlayer{
 	static int status = 1;//1 is don't lay mines, 2 is lay mines
 	static int injured_health = 20;
    static int SUPERIORITY = 15;
-   static int CAPTURE_PRIVACY_RADIUS = 15;
+   static int CAPTURE_PRIVACY_RADIUS = 5;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
@@ -23,11 +23,17 @@ public class RobotPlayer{
 		while(true){
 			try{
 				if (rc.getType()==RobotType.SOLDIER){
-					soldierCode();
+               if(rc.getRobot().getID()<=103){
+                  scoutCode();
+               }else{
+                  soldierCode();
+               }
 				}else if (rc.getType()==RobotType.HQ){
 					hqCode();
 				}else if (rc.getType()==RobotType.MEDBAY){
 					medbayCode();
+				}else if (rc.getType()==RobotType.ARTILLERY){
+					artilleryCode();
 				}
 
 			}catch (Exception e){
@@ -188,11 +194,26 @@ public class RobotPlayer{
 		//first try to capture an encampment
       int numEnemies =
                      rc.senseNearbyGameObjects(Robot.class,CAPTURE_PRIVACY_RADIUS,rc.getTeam().opponent()).length;
+      int numArtilleryTargets=rc.senseNearbyGameObjects(Robot.class, RobotType.ARTILLERY.attackRadiusMaxSquared, rc.getTeam().opponent()).length;
+
 		if
       (defuseMines && (rc.getTeamPower() > rc.senseCaptureCost()) && rc.senseEncampmentSquare(myLoc) &&
       (numEnemies<1)){//leisure indicator
 			if(rc.getEnergon() < injured_health){
-				rc.captureEncampment(RobotType.MEDBAY);
+            //check if a medbay is a adjacent first.  If it is, build artillery. lols.
+            int medChannel=getChannel()+2;
+            MapLocation medbayLoc= IntToMaplocation(rc.readBroadcast(medChannel));
+            if(medbayLoc!= null){
+               if(rc.getLocation().isAdjacentTo(medbayLoc)){
+                  rc.captureEncampment(RobotType.ARTILLERY);
+               }else{
+                  rc.captureEncampment(RobotType.MEDBAY);
+               }
+            }else{
+               rc.captureEncampment(RobotType.MEDBAY);
+            }
+         }else if(numArtilleryTargets>3){
+                  rc.captureEncampment(RobotType.ARTILLERY);
          }else if(Math.random()<.7){
 				rc.captureEncampment(RobotType.GENERATOR);
 			}else{
@@ -253,7 +274,11 @@ public class RobotPlayer{
 
 					if((rc.getTeamPower()-40>10) &&(numFriendlies < (numEnemies +beGreaterBy))){
 						lookAround: for (Direction d:Direction.values()){
-							if (rc.canMove(d)){
+                     if(d == Direction.OMNI)
+								break lookAround;
+                     if(d == Direction.NONE)
+								break lookAround;
+							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d != Direction.NONE)){
 								rc.spawn(d);
                         //System.out.println("friendlies" + numFriendlies + "spawning");
 								break lookAround;
@@ -330,7 +355,26 @@ public class RobotPlayer{
 			rc.yield();
 		}
 	}
+   private static void artilleryCode(){
+      MapLocation myLoc = rc.getLocation();
+      while(true){
+         try{
 
+            if (rc.isActive()) {
+
+               Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class,RobotType.ARTILLERY.attackRadiusMaxSquared,rc.getTeam().opponent());
+               
+               if(nearbyEnemies.length > 0){
+                  rc.attackSquare(findClosest(nearbyEnemies));
+               }
+            }
+         }catch (Exception e){
+            System.out.println("Soldier Exception");
+            e.printStackTrace();
+         }
+         rc.yield();
+      }
+   }
 
 	//Messaging functions
 	public static int getChannel(){
@@ -387,4 +431,55 @@ public class RobotPlayer{
 		}
 		return false;
 	}
+
+   private static void scoutCode(){
+      MapLocation myLoc = rc.getLocation();
+      System.out.println("I'm a scout!");
+      while(true){
+         try{
+
+            if (rc.isActive()) {
+               boolean rotating_left_on_cant_move = (Math.random() < 0.5);
+
+               // aim to move directly towards enemy HQ
+               Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+
+               for (int i = 0; i < 8; i++) {
+
+                  if (rc.isActive()) {
+                     MapLocation location_of_dir = rc.getLocation().add(dir);
+
+                     if (rc.senseMine(location_of_dir) != null) {
+                        rc.defuseMine(location_of_dir);
+                        break;
+                     } else {
+
+                        if (rc.canMove(dir)) {
+                           //rc.setIndicatorString(0, "Last direction moved:"+dir.toString());
+                           //System.out.println("About to move" +  rc.getLocation().toString() + dir.toString() );
+                           rc.move(dir);
+                           //System.out.println("Moved" +  rc.getLocation().toString() + dir.toString() );
+                           //rc.breakpoint();
+                           i=8;
+                           break;
+                        } else {
+                           if (rotating_left_on_cant_move) {
+                              dir = dir.rotateLeft();
+                           } else {
+                              dir = dir.rotateRight();
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }catch (Exception e){
+            System.out.println("Soldier Exception");
+            e.printStackTrace();
+         }
+         rc.yield();
+      }
+   }
+
 }
+
