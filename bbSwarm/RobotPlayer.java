@@ -14,6 +14,7 @@ public class RobotPlayer{
 	static int status = 1;//1 is don't lay mines, 2 is lay mines
 	static int injured_health = 20;
    static int SUPERIORITY = 15;
+   static int CAPTURE_PRIVACY_RADIUS = 15;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
@@ -185,7 +186,11 @@ public class RobotPlayer{
 
 	private static void simpleMove(Direction dir, MapLocation myLoc, boolean defuseMines) throws GameActionException {
 		//first try to capture an encampment
-		if (defuseMines&&rc.getTeamPower()>rc.senseCaptureCost()&&rc.senseEncampmentSquare(myLoc)){//leisure indicator
+      int numEnemies =
+                     rc.senseNearbyGameObjects(Robot.class,CAPTURE_PRIVACY_RADIUS,rc.getTeam().opponent()).length;
+		if
+      (defuseMines && (rc.getTeamPower() > rc.senseCaptureCost()) && rc.senseEncampmentSquare(myLoc) &&
+      (numEnemies<1)){//leisure indicator
 			if(rc.getEnergon() < injured_health){
 				rc.captureEncampment(RobotType.MEDBAY);
          }else if(Math.random()<.7){
