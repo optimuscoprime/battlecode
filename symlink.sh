@@ -11,6 +11,11 @@ if [ `hostname` = "10-10-10-15.tpgi.com.au" ]; then
 TARGET_DIR="../battlecode2013player/teams/"
 THAT_DIR_TO_HERE="../../battlecode/"
 fi
+if [ `hostname` = "Golf.local" ]; then
+TARGET_DIR="../../battlecode/teams/"
+THAT_DIR_TO_HERE="../../code/battlecode/"
+fi
+
 
 
 for D in $TEAMS_DIR; do
