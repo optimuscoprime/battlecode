@@ -20,6 +20,7 @@ public class RobotPlayer{
 	static int full_health = 40;
    static int SUPERIORITY = 15;
    static int CAPTURE_PRIVACY_RADIUS = 5;
+   static int MINE_AROUND_HQ = 8;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
@@ -49,7 +50,19 @@ public class RobotPlayer{
 			rc.yield();
 		}
 	}
-	private static void soldierCode(){
+   private static int numEncampmentsOfType(RobotType type) throws GameActionException{
+      Robot[] friendlyObject = rc.senseNearbyGameObjects(Robot.class,100000000,rc.getTeam()); 
+      //get all objects.
+      int found=0;
+      // check numbers of each.  Would be more efficient to do one pass than one for each type..
+      for(int i=0; i < friendlyObject.length; i++){
+         RobotInfo rInfo = rc.senseRobotInfo(friendlyObject[i]);
+         if(rInfo.type == type)
+            found++;
+      }
+      return found;
+   }
+   private static void soldierCode(){
 		MapLocation rallyPt = rc.getLocation();
       boolean injured=false;
 		while(true){
@@ -119,12 +132,15 @@ public class RobotPlayer{
 	}
 
 
+
 	private static boolean goodPlace(MapLocation location, int nearbyEnemies, int enemies) {
-//		return ((3*location.x+location.y)%8==0);//pickaxe with gaps
-//		return ((2*location.x+location.y)%5==0);//pickaxe without gaps
+
       if((nearbyEnemies > 0)|| (enemies == 0)) return false; //if dont mine if enemy not seen yet, or close
-      
-		return ((location.x+location.y)%2==0);//checkerboard
+      if(location.distanceSquaredTo(rc.senseHQLocation())<=MINE_AROUND_HQ)
+         return true;
+		return ((2*location.x+location.y)%5==0);//pickaxe without gaps
+//		return ((3*location.x+location.y)%8==0);//pickaxe with gaps
+//		return ((location.x+location.y)%2==0);//checkerboard
 	}
 	//Movement system
 	private static void freeGo(MapLocation target, Robot[] allies,Robot[] enemies,Robot[] nearbyEnemies) throws GameActionException {
@@ -145,7 +161,7 @@ public class RobotPlayer{
 				MapLocation closestAlly = findClosest(allies);
 				goalLoc = goalLoc.add(myLoc.directionTo(closestAlly),5);
 			}
-			if((nearbyEnemies.length>0) && (rc.senseHQ()Location.distanceSquaredTo(myLoc) < 37 )){//avoid enemy unless defending.
+			if((nearbyEnemies.length>0) && (rc.senseHQLocation().distanceSquaredTo(myLoc) < 37 )){//avoid enemy unless defending.
 				MapLocation closestEnemy = findClosest(nearbyEnemies);
 				goalLoc = goalLoc.add(myLoc.directionTo(closestEnemy),-10);
 			}
@@ -201,6 +217,14 @@ public class RobotPlayer{
       int numEnemies =
                      rc.senseNearbyGameObjects(Robot.class,CAPTURE_PRIVACY_RADIUS,rc.getTeam().opponent()).length;
       int numArtilleryTargets=rc.senseNearbyGameObjects(Robot.class, RobotType.ARTILLERY.attackRadiusMaxSquared, rc.getTeam().opponent()).length;
+		MapLocation enemyLoc = rc.senseEnemyHQLocation();
+
+      int existingGens = numEncampmentsOfType(RobotType.GENERATOR);
+      //FIXME - these functions shouldn't really run twice.  They're slow. once we hit our cap we
+      //should store it and not even bother looping.
+ 
+      int existingSupp = numEncampmentsOfType(RobotType.SUPPLIER);
+
 
 		if
       (defuseMines && (rc.getTeamPower() > rc.senseCaptureCost()) && rc.senseEncampmentSquare(myLoc) &&
@@ -218,28 +242,39 @@ public class RobotPlayer{
             }else{
                rc.captureEncampment(RobotType.MEDBAY);
             }
-         }else if((numArtilleryTargets>3) ||(enemyLoc.distanceSquaredTo(myLoc)< (RobotType.ARTILLERY.attackRadiusMaxSquared*2) ){ 
+         }else if((numArtilleryTargets>3) ||(enemyLoc.distanceSquaredTo(myLoc)<
+         (RobotType.ARTILLERY.attackRadiusMaxSquared*2) )){ 
                   rc.captureEncampment(RobotType.ARTILLERY);
-         }else if(Math.random()<.6){
-				rc.captureEncampment(RobotType.GENERATOR); //FIXME don't cap too many?
+         }else if((Math.random()<.6)&& (existingGens<4)){
+				rc.captureEncampment(RobotType.GENERATOR); 
+			}else if(existingSupp<10){
+				rc.captureEncampment(RobotType.SUPPLIER); 
 			}else{
-				rc.captureEncampment(RobotType.SUPPLIER); //FIXME don't cap too many?
-			}
+            doMove(dir,myLoc,defuseMines); // other things didn't work out.
+         }
 		}else{
-			//then consider moving
-			int[] directionOffsets = {0,1,-1,2,-2};
-			Direction lookingAtCurrently = null;
-			lookAround: for (int d:directionOffsets){
-				lookingAtCurrently = Direction.values()[(dir.ordinal()+d+8)%8];
-				Team currentMine = rc.senseMine(myLoc.add(lookingAtCurrently));
-				if(rc.canMove(lookingAtCurrently)&&(defuseMines||(!defuseMines&&(currentMine==rc.getTeam()||currentMine==null)))){
-					moveOrDefuse(lookingAtCurrently);
-					break lookAround;
-				}
-			}
-		}
-	}
-   private static boolean notMakeEncampWall(MapLocation target) throws GameActionException{
+         //then consider moving
+         doMove(dir,myLoc,defuseMines);
+      }
+   }
+   private static void doMove(Direction dir, MapLocation myLoc, boolean defuseMines) throws GameActionException{
+
+      int[] directionOffsets = {0,1,-1,2,-2};
+      Direction lookingAtCurrently = null;
+      //argh, vims indenting has issues.
+lookAround: for (int d:directionOffsets){
+               lookingAtCurrently = Direction.values()[(dir.ordinal()+d+8)%8];
+               Team currentMine = rc.senseMine(myLoc.add(lookingAtCurrently));
+               if(rc.canMove(lookingAtCurrently)&&(defuseMines||(!defuseMines&&(currentMine==rc.getTeam()||currentMine==null)))){
+                  moveOrDefuse(lookingAtCurrently);
+                  break lookAround;
+               }
+
+      } 
+   }
+
+
+            private static boolean notMakeEncampWall(MapLocation target) throws GameActionException{
       // Function to tell if capturing a square makes an encampmentWall.
       int Xobjects=0;
       int Yobjects=0;
@@ -307,9 +342,9 @@ public class RobotPlayer{
                rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent()).length;
 					// Spawn a soldier
 					//			Robot[] alliedRobots = rc.senseNearbyGameObjects(Robot.class,100000,rc.getTeam());
-               int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*3:SUPERIORITY;
+               int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*2:SUPERIORITY;
 
-					if((rc.getTeamPower()-40>10) &&(numFriendlies < (numEnemies +beGreaterBy))){
+					if(((rc.getTeamPower()-40>10)||(Clock.getRoundNum()<2))&&(numFriendlies < (numEnemies +beGreaterBy))){
 						lookAround: for (Direction d:Direction.values()){
                      if(d == Direction.OMNI)
 								break lookAround;
