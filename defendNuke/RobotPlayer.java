@@ -1,13 +1,9 @@
-package bbSwarm;
+package defendNuke;
 /*
-Based largely on the example swarm2 player fromm lecture slides.
-- Also try to use medbays though if injured.
-- And use artillery if lots of enemies around but not too close.
-- artillery strategy is a bit simple.
-- first unit or two are scouts incase we're facing a nukebot.
-
+Simple bot to build mines around the base and defend it whilst it researches nuke.
+Base on swarm2.
+Based largely on the swarm2 example
 */
-
 
 import battlecode.common.*;
 
@@ -19,9 +15,9 @@ public class RobotPlayer{
 
 	static int injured_health = 20;
 	static int full_health = 40;
-   static int SUPERIORITY = 15;
+   static int SUPERIORITY = 10;
    static int CAPTURE_PRIVACY_RADIUS = 5;
-   static int MINE_AROUND_HQ = 8;
+   static int MINE_AROUND_HQ = 25;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
@@ -220,11 +216,11 @@ public class RobotPlayer{
       int numArtilleryTargets=rc.senseNearbyGameObjects(Robot.class, RobotType.ARTILLERY.attackRadiusMaxSquared, rc.getTeam().opponent()).length;
 		MapLocation enemyLoc = rc.senseEnemyHQLocation();
 
-      int existingGens = numEncampmentsOfType(RobotType.GENERATOR);
+      //int existingGens = numEncampmentsOfType(RobotType.GENERATOR);
       //FIXME - these functions shouldn't really run twice.  They're slow. once we hit our cap we
       //should store it and not even bother looping.
  
-      int existingSupp = numEncampmentsOfType(RobotType.SUPPLIER);
+      //int existingSupp = numEncampmentsOfType(RobotType.SUPPLIER);
 
 
 		if
@@ -243,15 +239,8 @@ public class RobotPlayer{
             }else{
                rc.captureEncampment(RobotType.MEDBAY);
             }
-         }else if((numArtilleryTargets>3) ||(enemyLoc.distanceSquaredTo(myLoc)<
-         (RobotType.ARTILLERY.attackRadiusMaxSquared*2) )){ 
+         }else {
                   rc.captureEncampment(RobotType.ARTILLERY);
-         }else if((Math.random()<.6)&& (existingGens<4)){
-				rc.captureEncampment(RobotType.GENERATOR); 
-			}else if(existingSupp<10){
-				rc.captureEncampment(RobotType.SUPPLIER); 
-			}else{
-            doMove(dir,myLoc,defuseMines); // other things didn't work out.
          }
 		}else{
          //then consider moving
@@ -341,11 +330,13 @@ lookAround: for (int d:directionOffsets){
                int numFriendlies=rc.senseNearbyGameObjects(Robot.class,1000,rc.getTeam()).length;
                int numEnemies =
                rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent()).length;
+                  //I suspect the above includes encampments.. which is a major flaw.
 					// Spawn a soldier
 					//			Robot[] alliedRobots = rc.senseNearbyGameObjects(Robot.class,100000,rc.getTeam());
                int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*2:SUPERIORITY;
 
-					if(((rc.getTeamPower()-40>10)||(Clock.getRoundNum()<2))&&(numFriendlies < (numEnemies +beGreaterBy))){
+					if(((rc.getTeamPower()-40>10)||(Clock.getRoundNum()<2))&&(numFriendlies <
+               (numEnemies/2 +beGreaterBy))){
 						lookAround: for (Direction d:Direction.values()){
                      if(d == Direction.OMNI)
 								break lookAround;
@@ -357,12 +348,12 @@ lookAround: for (int d:directionOffsets){
 								break lookAround;
 							}
 						}
-					}else if (!rc.hasUpgrade(Upgrade.PICKAXE)){
-						rc.researchUpgrade(Upgrade.PICKAXE);
-					}else if (!rc.hasUpgrade(Upgrade.DEFUSION)){
-						rc.researchUpgrade(Upgrade.DEFUSION);
-					}else if (!rc.hasUpgrade(Upgrade.FUSION)){
-						rc.researchUpgrade(Upgrade.FUSION);
+					//}else if (!rc.hasUpgrade(Upgrade.PICKAXE)){
+					//	rc.researchUpgrade(Upgrade.PICKAXE);
+					//}else if (!rc.hasUpgrade(Upgrade.DEFUSION)){
+					//	rc.researchUpgrade(Upgrade.DEFUSION);
+					//}else if (!rc.hasUpgrade(Upgrade.FUSION)){
+					//	rc.researchUpgrade(Upgrade.FUSION);
 					}else if (!rc.hasUpgrade(Upgrade.NUKE)){
 						rc.researchUpgrade(Upgrade.NUKE);
 					}
@@ -378,7 +369,8 @@ lookAround: for (int d:directionOffsets){
 					}
 				}
 				
-				if(rc.getEnergon()<300||Clock.getRoundNum()>400||rc.senseEnemyNukeHalfDone()){//kill enemy if nearing round limit or injured
+				//if(rc.getEnergon()<300||Clock.getRoundNum()>400||rc.senseEnemyNukeHalfDone()){//kill enemy if nearing round limit or injured
+				if(1==2){// how about we don't attach and just defend our base.
 					rallyPt = enemyLoc;
 				}
 				
