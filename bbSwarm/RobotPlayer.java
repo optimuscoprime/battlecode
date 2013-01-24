@@ -1,7 +1,10 @@
 package bbSwarm;
 /*
 Based largely on the example swarm2 player fromm lecture slides.
-- Also try to use medbays though if not full life.
+- Also try to use medbays though if injured.
+- And use artillery if lots of enemies around but not too close.
+- artillery strategy is a bit simple.
+- first unit or two are scouts incase we're facing a nukebot.
 
 */
 
