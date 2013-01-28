@@ -368,7 +368,7 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 20 && numUpgradesRemaining > 0) {
+		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 5 && numUpgradesRemaining > 0) {
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
