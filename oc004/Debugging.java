@@ -48,7 +48,7 @@ public class Debugging {
 		int bytecodesUsed = bytecodesNow - bytecodesBefore;
 		StackTraceElement[] stackTraceElements = new Throwable().getStackTrace();
 		String methodName = stackTraceElements[1].getMethodName();
-		if (bytecodesUsed > 0) {
+		if (bytecodesUsed >= 0) {
 			debug_printf("%d bytecodes were used by %s\n", bytecodesUsed, methodName);
 		}
 	}	
