@@ -576,10 +576,10 @@ public class RobotPlayer {
 				break;
 			case DEFEND:
 				upgradePriorities = new Upgrade[] {
-						FUSION,						
+						FUSION,
 						PICKAXE,
-						NUKE,
 						DEFUSION,						
+						NUKE,
 						VISION					
 				};				
 				break;
