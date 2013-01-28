@@ -64,14 +64,14 @@ public class RobotPlayer {
 		bytecodeStack = new IntStack(10);
 	}
 
-        // use bc.conf to turn debug mode on
-        private static void debug_printf(String format, Object ... objects) {
-                System.out.printf(format, objects);
-                System.out.printf("\n");
-        }
+	// use bc.conf to turn debug mode on
+	private static void debug_printf(String format, Object ... objects) {
+		System.out.printf(format, objects);
+		System.out.printf("\n");
+	}
 
-        private static void debug_printf(Exception e) {
-                debug_printf("%s: %s", e.getStackTrace()[0].getMethodName(), e.getMessage());		
+	private static void debug_printf(Exception e) {
+		debug_printf("%s: %s", e.getStackTrace()[0].getMethodName(), e.getMessage());		
 	}
 
 	private static void debug_printf(Object o) {
