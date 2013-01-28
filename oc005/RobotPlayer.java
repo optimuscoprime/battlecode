@@ -106,8 +106,6 @@ public class RobotPlayer {
 
 	private static int numAlliedEncampments;
 
-	private static MapLocation[] myMineLocations;
-
 	private static int numAlliedGenerators;
 
 	private static int numAlliedSuppliers;
@@ -214,7 +212,21 @@ public class RobotPlayer {
 
 		allEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, HUGE_RADIUS, enemyTeam);
 		nearbyEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, UPGRADED_SENSE_RADIUS_SQUARED, enemyTeam);
-		numNearbyEnemies = nearbyEnemyLocations.length;
+		numNearbyEnemies = 0;
+
+		for (Robot nearbyEnemy: nearbyEnemyLocations) {
+			RobotInfo enemyInfo = null;
+			try {
+				enemyInfo = rc.senseRobotInfo(nearbyEnemy);
+			} catch (GameActionException e) {
+				debug_catch(e);
+			}				
+			if (enemyInfo != null) {
+				if (enemyInfo.type == SOLDIER) {
+					numNearbyEnemies++;
+				}
+			}			
+		}
 
 		closestEnemyLocation = enemyHQLocation;
 		int smallestDistance = myLocation.distanceSquaredTo(closestEnemyLocation);
@@ -367,7 +379,7 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (3 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
 
 			macroStrategy = MacroStrategy.EXPAND;
 
@@ -440,7 +452,6 @@ public class RobotPlayer {
 	private static void updateMineLocations() {
 		debug_startMethod();
 
-		myMineLocations = rc.senseMineLocations(mapCenter, HUGE_RADIUS, myTeam);
 		enemyMineLocations = rc.senseMineLocations(mapCenter, HUGE_RADIUS, enemyTeam);
 		nonAlliedMineLocations = rc.senseNonAlliedMineLocations(mapCenter, HUGE_RADIUS);			
 		allMineLocations = rc.senseMineLocations(mapCenter, HUGE_RADIUS, null);
@@ -697,14 +708,12 @@ public class RobotPlayer {
 		int distanceToEnemyHQ = myLocation.distanceSquaredTo(enemyHQLocation);
 
 		if (numNearbyEnemies > 0) {
-			if (numNearbyEnemies <= numNearbyAllies + 1) {
+			if (numNearbyEnemies <= numNearbyAllies) {
 				microStrategy = MicroStrategy.ATTACK;
-			} else if (numNearbyEnemies > 3 * numNearbyAllies) {
+			} else if (numNearbyEnemies > 2 * numNearbyAllies) {
 				microStrategy = MicroStrategy.DEFEND;
 			}
-		} else if (numNearbyAllies > 10) {
-			microStrategy = MicroStrategy.ATTACK;
-		} else if (distanceToEnemyHQ < UPGRADED_SENSE_RADIUS_SQUARED) {
+		} else if (distanceToEnemyHQ < DEFAULT_SENSE_RADIUS_SQUARED) {
 			microStrategy = MicroStrategy.ATTACK;
 			closestEnemyLocation = enemyHQLocation;
 		}
@@ -744,12 +753,7 @@ public class RobotPlayer {
 			if (distanceToMyHQ <= UPGRADED_SENSE_RADIUS_SQUARED && numNearbyEnemies == 0) {
 				Team mineStatus = rc.senseMine(myLocation);
 				if (mineStatus == null) {
-					try {
-						rc.layMine();
-						layingMine = true;
-					} catch (GameActionException e) {
-						debug_catch(e);
-					}
+					layingMine = tryLayMine();
 				}
 			}
 
@@ -761,18 +765,35 @@ public class RobotPlayer {
 		debug_endMethod();
 	}	
 
+	private static boolean tryLayMine() {
+		debug_startMethod();
+
+		boolean layingMine = false;
+
+		try {
+			rc.layMine();
+			layingMine = true;
+		} catch (GameActionException e) {
+			debug_catch(e);
+		}		
+
+		debug_endMethod();
+
+		return layingMine;
+	}
+
 	private static void decideMove_soldier_expand() {
 		debug_startMethod();
 
 		if (closestNonAlliedEncampmentLocation != null) {
 			if (myLocation.equals(closestNonAlliedEncampmentLocation)) {
 
-				// check for mines first
+				// try to defuse
 				boolean defusing = false;
-				MapLocation[] adjacentMines = rc.senseNonAlliedMineLocations(myLocation, DIAGONALLY_ADJACENT_RADIUS);
+				MapLocation[] adjacentNonAlliedMines = rc.senseNonAlliedMineLocations(myLocation, DIAGONALLY_ADJACENT_RADIUS);
 
-				if (adjacentMines.length > 0) {
-					defusing = tryDefuseMine(adjacentMines[0]);
+				if (adjacentNonAlliedMines.length > 4) {
+					defusing = tryDefuseMine(adjacentNonAlliedMines[0]);
 				}
 
 				boolean safeToCapture = numNearbyEnemies == 0;
@@ -786,7 +807,18 @@ public class RobotPlayer {
 					}
 				}
 			} else {
-				moveToLocation(closestNonAlliedEncampmentLocation);
+
+				// try to lay
+				boolean laying = false;
+
+				MapLocation[] adjacentAlliedMines = rc.senseMineLocations(myLocation, DIAGONALLY_ADJACENT_RADIUS, myTeam);
+				if (adjacentAlliedMines.length == 0) {
+					laying = tryLayMine();
+				}				
+				if (!laying) {
+
+					moveToLocation(closestNonAlliedEncampmentLocation);
+				}
 			}
 		} else {
 			moveToLocation(rallyPoint);
@@ -848,7 +880,8 @@ public class RobotPlayer {
 				location.y <= mapHeight - 8) {
 
 			if (location.distanceSquaredTo(myHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
-					location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED) {
+					location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
+					location.distanceSquaredTo(enemyHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED) {
 
 				// don't build artillery at edge of map, useless?
 
@@ -959,9 +992,8 @@ public class RobotPlayer {
 			Team mineStatus = rc.senseMine(nextLocation);
 			boolean defusing = false;
 
-			if (mineStatus == enemyTeam && (numNearbyEnemies == 0 || random.nextInt(5) == 0)) {
-				defusing = tryDefuseMine(nextLocation);
-			} else if (mineStatus == NEUTRAL && numNearbyEnemies < 2) {
+			if ( (mineStatus == enemyTeam || mineStatus == NEUTRAL) &&
+					(numNearbyEnemies == 0 || (numNearbyEnemies < 5 && random.nextInt(2) == 0))) {
 				defusing = tryDefuseMine(nextLocation);
 			}
 
