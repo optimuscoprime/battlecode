@@ -1,6 +1,11 @@
 #!/usr/bin/ruby
 
 require 'fileutils'
+require('rubygems')
+require('parseconfig')
+
+config = ParseConfig.new('./sim.conf')
+APP_DIR =  config['APP_DIR']
 
 # ----------------------------------------
 # C O N F I G   S E C T I O N
@@ -11,10 +16,13 @@ DEBUG = false
 # -- specify a custom list of teams to all play each other
 # -- Leave this as empty (which is '[]') to make all teams in 'teams/' directory play each other.
 # custom_list_of_teams = []
-custom_list_of_teams = ["oc003", "sc0011", "bbNuke01"]
+custom_list_of_teams = ["oc004", "sc0011", "bbSwarm", "defendNuke"]
+#custom_list_of_teams =  config.['custom_list_of_teams']
+custom_list_of_maps = ["simple","Ulaanbaatar","Kleenex"]
+#custom_list_of_maps = ["Akviligjuaq", "BlastRadius", "Chicago", "Cyclonical", "Djibouti", "Quarry","Runway", "Shard","Ulaanbaatar","simple"]
 
 # -- where you installed the app (this folder contains the maps, teams, etc folders)
-APP_DIR = "/Applications/Battlecode2013"
+# See above for APP_DIR = "/Users/iangoldsmith/priv/code/battlecode13/battlecode2013player"
 
 # -- overall scoring of match results
 SCORE_WIN = 3
@@ -72,15 +80,18 @@ end
 
 # get a list of the maps in the map dir
 maps = []
-maps_dir = File.join(APP_DIR, "maps")
+if custom_list_of_maps.count > 0
+  maps = custom_list_of_maps
+else
+  maps_dir = File.join(APP_DIR, "maps")
 
-Dir.foreach(maps_dir) do |f|
-  f = File.expand_path(File.join(maps_dir, f))
+  Dir.foreach(maps_dir) do |f|
+    f = File.expand_path(File.join(maps_dir, f))
   
-  if f =~ /xml$/
-    maps << File.basename(f)
+    if f =~ /xml$/
+      maps << File.basename(f)
+    end
   end
-  
 end
 
 if DEBUG
@@ -119,7 +130,7 @@ teams.each do |teamA|
       FileUtils.copy(bc_conf_filename, bc_conf_filename + ".backup")
       # ----------
       
-      puts "Editing bc.conf to set up match"
+      #puts "Editing bc.conf to set up match"
       bc_conf_contents = File.read(bc_conf_filename)    
       bc_conf_contents.gsub!(/^.*bc.game.maps=.*$/, "bc.game.maps=#{map}")
       bc_conf_contents.gsub!(/^.*bc.game.team-a=.*$/, "bc.game.team-a=#{teamA}")
@@ -139,7 +150,8 @@ teams.each do |teamA|
       Dir.chdir(APP_DIR)
 
       counter += 1
-      puts "Running match [#{counter}/#{total_games_to_run}] (#{teamA}) vs (#{teamB}) @ (#{map.gsub(".xml", "")})"
+      #STDOUT.sync = true # dont buffer printing.
+      print "Running match [#{counter}/#{total_games_to_run}] (#{teamA}) vs (#{teamB}) @ (#{map.gsub(".xml", "")})\t\t"
       # run the match
       content = `ant file`
       
@@ -163,7 +175,7 @@ teams.each do |teamA|
       Dir.chdir(prev_dir)
       
       # ----------
-      puts "Copying bc.conf backup back to original location"
+      #puts "Copying bc.conf backup back to original location"
       FileUtils.copy(bc_conf_filename + ".backup", bc_conf_filename)            
     end
   end
