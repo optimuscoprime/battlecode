@@ -21,6 +21,7 @@ public class Debugging {
 
 	// use bc.conf to turn debug mode on
 	public static void debug_printf(String format, Object ... objects) {
+		System.out.printf("ROUND %d\n", Clock.getRoundNum());
 		System.out.printf(format, objects);
 		System.out.printf("\n");
 	}	
@@ -30,6 +31,8 @@ public class Debugging {
 		if (e instanceof GameActionException) {
 			GameActionException gae = (GameActionException) e;
 			debug_printf("GameActionExceptionType: %s", gae.getType());
+			e.printStackTrace();
+			
 			gaeHistogram[gae.getType().ordinal()]++;
 
 			for (int i=0; i < GameActionExceptionType.values().length; i++) {
@@ -48,7 +51,7 @@ public class Debugging {
 		int bytecodesUsed = bytecodesNow - bytecodesBefore;
 		StackTraceElement[] stackTraceElements = new Throwable().getStackTrace();
 		String methodName = stackTraceElements[1].getMethodName();
-		if (bytecodesUsed >= 0) {
+		if (bytecodesUsed >= 1000) {
 			debug_printf("%d bytecodes were used by %s\n", bytecodesUsed, methodName);
 		}
 	}	
