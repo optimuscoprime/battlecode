@@ -11,3 +11,5 @@
 
 # simulator game log files
 simulator/*.rms
+
+simulator/sim.conf
