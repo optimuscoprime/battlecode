@@ -15,7 +15,7 @@ public class RobotPlayer {
 
 	private static final int LOTS_OF_EXCESS_POWER_THRESHOLD = 500;
 
-	private static final int HQ_RAW_DISTANCE_BIG_DISTANCE = 1000;
+	private static final int HQ_RAW_DISTANCE_BIG_DISTANCE = 1500;
 	private static final int HQ_RAW_DISTANCE_MEDIUM_DISTANCE = HQ_RAW_DISTANCE_BIG_DISTANCE / 2;	
 	private static final int HQ_RAW_DISTANCE_TINY_DISTANCE = HQ_RAW_DISTANCE_MEDIUM_DISTANCE / 2;	
 
@@ -387,7 +387,7 @@ public class RobotPlayer {
 		}
 
 		debug_printf("MACRO STRATEGY IS: %s\n", macroStrategy.toString());
-		rc.setIndicatorString(0, "MACRO: " + macroStrategy.toString() + "(" + macroReason + ")");
+		rc.setIndicatorString(0, "MACRO: " + macroStrategy.toString() + " (" + macroReason + ")");
 
 		debug_endMethod();
 	}
@@ -410,6 +410,8 @@ public class RobotPlayer {
 		boolean willTakeLongTimeForEnemyToReachUs = false;
 
 		int distanceFromOurHQToClosestEnemy = closestEnemyLocation.distanceSquaredTo(myHQLocation);
+
+		debug_printf("distance from our HQ to closest enemy is %d\n", distanceFromOurHQToClosestEnemy);
 
 		if (distanceFromOurHQToClosestEnemy > HQ_RAW_DISTANCE_BIG_DISTANCE) {
 
