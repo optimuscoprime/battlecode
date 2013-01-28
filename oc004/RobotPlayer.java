@@ -15,7 +15,7 @@ public class RobotPlayer {
 
 	private static final int LOTS_OF_EXCESS_POWER_THRESHOLD = 500;
 
-	private static final int HQ_RAW_DISTANCE_BIG_DISTANCE = 1500;
+	private static final int HQ_RAW_DISTANCE_BIG_DISTANCE = 6000;
 	private static final int HQ_RAW_DISTANCE_MEDIUM_DISTANCE = HQ_RAW_DISTANCE_BIG_DISTANCE / 2;	
 	private static final int HQ_RAW_DISTANCE_TINY_DISTANCE = HQ_RAW_DISTANCE_MEDIUM_DISTANCE / 2;	
 
@@ -116,6 +116,8 @@ public class RobotPlayer {
 
 	private static int numAlliedSoldiers;
 
+	private static int numPartialAlliedEncampments;
+
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
 
@@ -139,17 +141,12 @@ public class RobotPlayer {
 		initialise(rc);
 
 		while(true) {
-			debug_printf("START OF TURN");
-
 			try {
 				decideMove();
 			} catch (Exception e) {
 				debug_printf("Unexpected exception: %s\n", e.toString());
 				e.printStackTrace();
 			}
-
-			debug_printf("END OF TURN");
-
 			rc.yield();
 		}
 	}
@@ -258,8 +255,6 @@ public class RobotPlayer {
 				teamPower > (POWER_COST_PER_BYTECODE * AVERAGE_BYTECODES_USED * numAllies)) {
 			Direction bestSpawnDirection = findBestSpawnDirection();
 
-			debug_printf("Want to spawn at direction: %s\n", bestSpawnDirection);
-
 			spawned = didSpawn(bestSpawnDirection);				
 		}
 
@@ -354,8 +349,6 @@ public class RobotPlayer {
 
 		String macroReason = "";
 
-		macroStrategy = MacroStrategy.ATTACK; // default
-
 		// TODO: enemy nuke progress
 
 		if (Clock.getRoundNum() >= ROUND_MIN_LIMIT) {
@@ -370,19 +363,31 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 4 && numUpgradesRemaining > 0) {
+		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 10 && numUpgradesRemaining > 0) {
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 4 && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (3 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
 
 			macroStrategy = MacroStrategy.EXPAND;
 
-		} else if (Clock.getRoundNum() < 300) {
+		} else if (Clock.getRoundNum() < 100) {
 
-			macroReason = "round < 300";
+			macroReason = "round < 100";
 
 			macroStrategy = MacroStrategy.DEFEND;
+
+		} else if (numAlliedSoldiers >= 10 && numAlliedEncampments > 0 && numUpgradesRemaining > 0) {
+
+			macroStrategy = MacroStrategy.RESEARCH;			
+
+		} else if (numAlliedSoldiers >= (2 + (3 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+
+			macroStrategy = MacroStrategy.EXPAND;
+
+		} else {
+
+			macroStrategy = MacroStrategy.ATTACK; // default
 
 		}
 
@@ -456,6 +461,7 @@ public class RobotPlayer {
 		int shortestDistance = -1;
 		closestAllyLocation = rallyPoint;
 		numAlliedSoldiers = 0;
+		numPartialAlliedEncampments = 0;
 
 		for (Robot ally: allyLocations) {
 			RobotInfo allyInfo = null;
@@ -469,6 +475,12 @@ public class RobotPlayer {
 			if (allyInfo != null) {
 				if (allyInfo.type == SOLDIER) {
 					numAlliedSoldiers++;
+
+					if (rc.canSenseSquare(allyInfo.location)) {
+						if (rc.senseEncampmentSquare(allyInfo.location)) {
+							numPartialAlliedEncampments++;
+						}
+					}
 				}
 				int distance = myLocation.distanceSquaredTo(allyInfo.location);
 				if (shortestDistance == -1 || distance < shortestDistance) {
@@ -685,12 +697,12 @@ public class RobotPlayer {
 		int distanceToEnemyHQ = myLocation.distanceSquaredTo(enemyHQLocation);
 
 		if (numNearbyEnemies > 0) {
-			if (numNearbyEnemies < numNearbyAllies) {
+			if (numNearbyEnemies <= numNearbyAllies + 1) {
 				microStrategy = MicroStrategy.ATTACK;
-			} else if (numNearbyEnemies > 2 * numNearbyAllies) {
+			} else if (numNearbyEnemies > 3 * numNearbyAllies) {
 				microStrategy = MicroStrategy.DEFEND;
 			}
-		} else if (numNearbyAllies > 6) {
+		} else if (numNearbyAllies > 10) {
 			microStrategy = MicroStrategy.ATTACK;
 		} else if (distanceToEnemyHQ < UPGRADED_SENSE_RADIUS_SQUARED) {
 			microStrategy = MicroStrategy.ATTACK;
@@ -808,7 +820,8 @@ public class RobotPlayer {
 		if (artilleryUsefulAtLocation(myLocation)) {
 			bestEncampmentType = ARTILLERY;
 		} else {
-			if (numAlliedGenerators > numAlliedSuppliers) {
+			// favour suppliers
+			if (numAlliedSuppliers <= numAlliedGenerators * 2) {
 				bestEncampmentType = SUPPLIER;
 			} else {
 				bestEncampmentType = GENERATOR;
@@ -830,12 +843,12 @@ public class RobotPlayer {
 		boolean shouldBuildArtillery = false;
 
 		if ( location.x >= 8 && 
-			 location.y >= 8 &&
-			 location.x <= mapWidth - 8 &&
-			 location.y <= mapHeight - 8) {
+				location.y >= 8 &&
+				location.x <= mapWidth - 8 &&
+				location.y <= mapHeight - 8) {
 
 			if (location.distanceSquaredTo(myHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
-				location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED) {
+					location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED) {
 
 				// don't build artillery at edge of map, useless?
 
