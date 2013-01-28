@@ -26,7 +26,7 @@ public class RobotPlayer {
 	private static final int DIAGONALLY_ADJACENT_RADIUS = 2;
 	private static final int DIRECTLY_ADJACENT_RADIUS = 1;
 
-	private static final double HEAVILY_MINED_PERCENT_THRESHOLD = 0.4;
+	private static final double HEAVILY_MINED_PERCENT_THRESHOLD = 0.8;
 	private static final double LIGHTLY_MINED_PERCENT_THRESHOLD = 0.1;
 
 	private static final int HUGE_RADIUS = 1000000;
@@ -368,11 +368,11 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 5 && numUpgradesRemaining > 0) {
+		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 4 && numUpgradesRemaining > 0) {
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 2 && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers > 4 && numAvailableEncampments > 0 && lotsOfExcessPower()) {
 
 			macroStrategy = MacroStrategy.EXPAND;
 
@@ -489,7 +489,7 @@ public class RobotPlayer {
 
 			if (percentNonAlliedMines < LIGHTLY_MINED_PERCENT_THRESHOLD) {
 				willTakeShortTimeToReachEnemy = true;
-			}			
+			}
 		}
 
 		debug_endMethod();
