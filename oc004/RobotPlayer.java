@@ -1,24 +1,8 @@
 package oc004;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.GameObject;
-import battlecode.common.MapLocation;
-import battlecode.common.Robot;
-import battlecode.common.RobotController;
-import battlecode.common.RobotType;
-import battlecode.common.Team;
-import battlecode.common.Upgrade;
+import battlecode.common.*;
 
 public class RobotPlayer {
 
@@ -30,6 +14,7 @@ public class RobotPlayer {
 
 	// DEBUG
 	private static IntStack bytecodeStack;
+	private static int[] gaeHistogram;
 
 	public static void run(RobotController rc) {
 		initialise(rc);
@@ -39,7 +24,7 @@ public class RobotPlayer {
 			try {
 				decideMove();
 			} catch (Exception e) {
-				debug_printf(e);
+				debug_catch(e);
 			}
 
 			rc.yield();
@@ -62,20 +47,25 @@ public class RobotPlayer {
 
 	private static void debug_initialise() {
 		bytecodeStack = new IntStack(10);
+		gaeHistogram = new int[GameActionExceptionType.values().length];
 	}
 
 	// use bc.conf to turn debug mode on
 	private static void debug_printf(String format, Object ... objects) {
 		System.out.printf(format, objects);
-		System.out.printf("\n");
 	}
 
-	private static void debug_printf(Exception e) {
-		debug_printf("%s: %s", e.getStackTrace()[0].getMethodName(), e.getMessage());		
-	}
+	private static void debug_catch(Exception e) {
+		debug_printf("%s: %s\n", e.getStackTrace()[0].getMethodName(), e.getMessage());		
+		if (e instanceof GameActionException) {
+			GameActionException gae = (GameActionException) e;
+			debug_printf("GameActionExceptionType: %s", gae.getType());
+			gaeHistogram[gae.getType().ordinal()]++;
 
-	private static void debug_printf(Object o) {
-		debug_printf("%s", o.toString());
+			for (int i=0; i < GameActionExceptionType.values().length; i++) {
+				debug_printf("%04d: %s\n", gaeHistogram[i], GameActionExceptionType.values()[i]);
+			}
+		}
 	}
 
 	private static void debug_startMethod() {
