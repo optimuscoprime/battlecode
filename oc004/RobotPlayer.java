@@ -4,7 +4,7 @@ import java.util.*;
 
 import battlecode.common.*;
 
-import static oc004.Debugging.*;
+import static oc004.Util.*;
 import static battlecode.common.GameConstants.*;
 import static battlecode.common.Direction.*;
 import static battlecode.common.Team.*;

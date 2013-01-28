@@ -4,7 +4,7 @@ import battlecode.common.Clock;
 import battlecode.common.GameActionException;
 import battlecode.common.GameActionExceptionType;
 
-public class Debugging {
+public class Util {
 
 	// DEBUG
 	private static IntStack bytecodeStack;
