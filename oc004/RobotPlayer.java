@@ -15,7 +15,7 @@ public class RobotPlayer {
 
 	private static final int LOTS_OF_EXCESS_POWER_THRESHOLD = 500;
 
-	private static final int HQ_RAW_DISTANCE_BIG_DISTANCE = 150;
+	private static final int HQ_RAW_DISTANCE_BIG_DISTANCE = 1000;
 	private static final int HQ_RAW_DISTANCE_MEDIUM_DISTANCE = HQ_RAW_DISTANCE_BIG_DISTANCE / 2;	
 	private static final int HQ_RAW_DISTANCE_TINY_DISTANCE = HQ_RAW_DISTANCE_MEDIUM_DISTANCE / 2;	
 
@@ -352,6 +352,8 @@ public class RobotPlayer {
 
 		boolean willTakeLongTimeForEnemyToReachUs = willTakeLongTimeForEnemyToReachUs();
 
+		String macroReason = "";
+
 		macroStrategy = MacroStrategy.ATTACK; // default
 
 		// TODO: enemy nuke progress
@@ -378,12 +380,14 @@ public class RobotPlayer {
 
 		} else if (Clock.getRoundNum() < 300) {
 
+			macroReason = "round < 300";
+
 			macroStrategy = MacroStrategy.DEFEND;
 
 		}
 
 		debug_printf("MACRO STRATEGY IS: %s\n", macroStrategy.toString());
-		rc.setIndicatorString(0, "MACRO: " + macroStrategy.toString());
+		rc.setIndicatorString(0, "MACRO: " + macroStrategy.toString() + "(" + macroReason + ")");
 
 		debug_endMethod();
 	}
@@ -480,6 +484,8 @@ public class RobotPlayer {
 		boolean willTakeShortTimeToReachEnemy = false;
 
 		int distanceFromOurHQToClosestEnemy = closestEnemyLocation.distanceSquaredTo(myHQLocation);
+
+		debug_printf("distance from our base to closest enemy: %d\n", distanceFromOurHQToClosestEnemy);
 
 		if (distanceFromOurHQToClosestEnemy < HQ_RAW_DISTANCE_TINY_DISTANCE) {
 
