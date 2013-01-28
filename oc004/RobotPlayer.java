@@ -85,8 +85,11 @@ public class RobotPlayer {
 	private static void debug_endMethod() {
 		int bytecodesNow = Clock.getBytecodeNum();
 		int bytecodesBefore = bytecodeStack.pop();
+		int bytecodesUsed = bytecodesNow - bytecodesBefore;
 		String methodName = new Throwable().getStackTrace()[1].getMethodName();
-		debug_printf("%d bytecodes used by %s (and any functions it calls)\n", bytecodesNow - bytecodesBefore, methodName);
+		if (bytecodesUsed > 0) {
+			debug_printf("%d bytecodes were used by %s\n", bytecodesUsed, methodName);
+		}
 	}
 
 	private static void decideMove() {
