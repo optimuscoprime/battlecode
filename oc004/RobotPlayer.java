@@ -594,10 +594,10 @@ public class RobotPlayer {
 				break;
 			case RESEARCH:
 				upgradePriorities = new Upgrade[] {
-						NUKE,
 						FUSION,						
-						PICKAXE,						
 						DEFUSION,
+						PICKAXE,
+						NUKE,						
 						VISION						
 				};				
 				break;
