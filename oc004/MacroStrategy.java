@@ -6,5 +6,5 @@ public enum MacroStrategy {
 	DEFEND,
 	EXPAND,
 	RESEARCH
-	
+
 }

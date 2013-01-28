@@ -363,7 +363,7 @@ public class RobotPlayer {
 
 		percentAlliedMines = (allMineLocations.length - enemyMineLocations.length) / numMapLocations;
 		percentNonAlliedMines = nonAlliedMineLocations.length / numMapLocations;
-		
+
 		debug_endMethod();
 	}
 

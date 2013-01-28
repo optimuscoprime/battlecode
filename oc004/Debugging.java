@@ -9,22 +9,22 @@ public class Debugging {
 	// DEBUG
 	private static IntStack bytecodeStack;
 	private static int[] gaeHistogram;
-	
+
 	static {
 		debug_initialise();
 	}
-	
+
 	private static void debug_initialise() {
 		bytecodeStack = new IntStack(10);
 		gaeHistogram = new int[GameActionExceptionType.values().length];
 	}	
-	
+
 	// use bc.conf to turn debug mode on
 	public static void debug_printf(String format, Object ... objects) {
 		System.out.printf(format, objects);
 		System.out.printf("\n");
 	}	
-	
+
 	public static void debug_catch(Exception e) {
 		debug_printf("%s: %s\n", e.getStackTrace()[0].getMethodName(), e.getMessage());		
 		if (e instanceof GameActionException) {
@@ -52,5 +52,5 @@ public class Debugging {
 			debug_printf("%d bytecodes were used by %s\n", bytecodesUsed, methodName);
 		}
 	}	
-	
+
 }
