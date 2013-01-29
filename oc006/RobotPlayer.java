@@ -438,13 +438,13 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (currentRound < 200 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 10 && numUpgradesRemaining > 0) {
+		} else if (currentRound < 100 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 2 && numUpgradesRemaining > 0) {
 
 			macroReason = "long time for enemy to reach us";
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
-		} else if (currentRound < 200 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+		} else if (currentRound < 100 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
 
 			macroReason = "long time for enemy to reach us";
 
