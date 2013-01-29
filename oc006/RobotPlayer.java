@@ -37,7 +37,9 @@ public class RobotPlayer {
 
 	private static final double AVERAGE_BYTECODES_USED = 5000;
 
-	private static final double LOW_POWER_THRESHOLD = 5;
+	private static final double LOW_POWER_THRESHOLD = 50;
+
+	private static final double CAPTURE_ENCAMPMENT_MIN_POWER = CAPTURE_POWER_COST * 1.5;
 
 	private static int magicNukeNumber = 19641964;
 
@@ -898,7 +900,8 @@ public class RobotPlayer {
 	private static void decideMove_soldier_expand() {
 		debug_startMethod();
 
-		if (closestNonAlliedEncampmentLocation != null) {
+		if (teamPower > CAPTURE_ENCAMPMENT_MIN_POWER && closestNonAlliedEncampmentLocation != null) {
+
 			if (myLocation.equals(closestNonAlliedEncampmentLocation)) {
 
 				boolean safePosition = numNearbyEnemies == 0;
@@ -1189,10 +1192,10 @@ public class RobotPlayer {
 	private static void decideMove_supplier() {
 		debug_startMethod();
 
-		if (rc.getTeamPower() < LOW_POWER_THRESHOLD) {
-			if (random.nextInt(5) == 0) {
-				rc.suicide();
-			}
+		updateAllCaches();
+
+		if (teamPower < LOW_POWER_THRESHOLD && random.nextInt(5) == 0) {
+			rc.suicide();
 		}
 
 		debug_endMethod();
@@ -1208,7 +1211,7 @@ public class RobotPlayer {
 			int numAlliesAroundClosestEnemy = rc.senseNearbyGameObjects(Robot.class, closestEnemyLocation, DIAGONALLY_ADJACENT_RADIUS, myTeam).length;
 			int numEnemiesAroundClosestEnemy = rc.senseNearbyGameObjects(Robot.class, closestEnemyLocation, DIAGONALLY_ADJACENT_RADIUS, enemyTeam).length;
 
-			if (numAlliesAroundClosestEnemy < numEnemiesAroundClosestEnemy && rc.canAttackSquare(closestEnemyLocation)) {
+			if (numAlliesAroundClosestEnemy <= numEnemiesAroundClosestEnemy && rc.canAttackSquare(closestEnemyLocation)) {
 				try {
 					rc.attackSquare(closestEnemyLocation);			
 				} catch (GameActionException e) {
