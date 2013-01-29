@@ -1,11 +1,6 @@
-package team219;
+package bbSwarmImproved3;
 /*
-Based largely on the example swarm2 player fromm lecture slides.
-- Also try to use medbays though if injured.
-- And use artillery if lots of enemies around but not too close.
-- artillery strategy is a bit simple.
-- first unit or two are scouts incase we're facing a nukebot.
-
+Artillery tries not to do friendly fire etc
 */
 
 
@@ -584,6 +579,12 @@ lookAround: for (Direction d:Direction.values()){
                Robot[] allies = rc.senseNearbyGameObjects(Robot.class,tryTarget, 2,rc.getTeam());
                Robot[] enemies = rc.senseNearbyGameObjects(Robot.class,tryTarget, 2,rc.getTeam().opponent());
                int score=enemies.length-allies.length;
+               if(rc.canSenseSquare(tryTarget)){
+                  GameObject center=rc.senseObjectAtLocation(tryTarget);
+                  if(center !=null)
+                     if(center.getTeam()==rc.getTeam().opponent())
+                        score++;
+               }
                if( (rc.getLocation().distanceSquaredTo(tryTarget) <=RobotType.ARTILLERY.attackRadiusMaxSquared)&&(score>bestScore)){
                   bestScore=score;
                   bestTarget=tryTarget;

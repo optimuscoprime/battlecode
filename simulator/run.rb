@@ -16,10 +16,10 @@ DEBUG = false
 # -- specify a custom list of teams to all play each other
 # -- Leave this as empty (which is '[]') to make all teams in 'teams/' directory play each other.
 # custom_list_of_teams = []
-custom_list_of_teams = [ "oc006", "oc005", "bbSwarm", "scBlindRush", "defendNuke" ]
+custom_list_of_teams = [ "oc006", "bbSwarmImproved2", "scBlindRush", "defendNuke" ]
 #custom_list_of_teams =  config.['custom_list_of_teams']
-custom_list_of_maps = []
-#custom_list_of_maps = ["simple","Ulaanbaatar","Kleenex"]
+#custom_list_of_maps = []
+custom_list_of_maps = ["simple","Ulaanbaatar","Kleenex"]
 #custom_list_of_maps = ["Akviligjuaq", "BlastRadius", "Chicago", "Cyclonical", "Djibouti", "Quarry","Runway", "Shard","Ulaanbaatar","simple"]
 
 # -- where you installed the app (this folder contains the maps, teams, etc folders)
