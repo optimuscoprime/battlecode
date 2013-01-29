@@ -131,7 +131,6 @@ public class RobotPlayer {
 	private static MapLocation closestMedbayLocation;	
 	private static MapLocation closestShieldLocation;
 	private static boolean enemyHasArtillery;
-	private static double myHQEnergon;
 	private static int roundsAlive;
 	private static int numAlliedMedBays;
 	private static final double MIN_SHIELDS_TO_BEAT_ARTILLERY = 60;
@@ -1024,7 +1023,7 @@ public class RobotPlayer {
 		RobotType bestEncampmentType = GENERATOR; // default
 
 		boolean goodPlaceForArtillery = artilleryUsefulAtLocation(myLocation);
-		
+
 		if (teamPower > HIGH_POWER_THRESHOLD || goodPlaceForArtillery) {
 			if (goodPlaceForArtillery && random.nextInt(3) != 0) {
 				bestEncampmentType = ARTILLERY;
@@ -1280,12 +1279,6 @@ public class RobotPlayer {
 
 		if (currentRoundNum % 50 == 0) {
 			random = new Random(myLocation.x + (37 * myLocation.y));
-		}
-
-		try {
-			myHQEnergon = rc.senseRobotInfo((Robot) rc.senseObjectAtLocation(myHQLocation)).energon;
-		} catch (GameActionException e) {
-			debug_catch(e);
 		}
 
 		updateEnemyLocations();
