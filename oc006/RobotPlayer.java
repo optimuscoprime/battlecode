@@ -398,7 +398,7 @@ public class RobotPlayer {
 		Direction bestDirection = NONE;
 		int smallestDistance = INFINITE_DISTANCE;
 
-		for (Direction direction: Direction.values()) {
+		for (Direction direction: GENUINE_DIRECTIONS) {
 			MapLocation newLocation = myHQLocation.add(direction);
 			GameObject gameObject = null;
 
