@@ -27,7 +27,7 @@ public class RobotPlayer {
 	private static final int DIRECTLY_ADJACENT_RADIUS = 1;
 
 	private static final double HEAVILY_MINED_PERCENT_THRESHOLD = 0.8;
-	private static final double LIGHTLY_MINED_PERCENT_THRESHOLD = 0.1;
+	private static final double LIGHTLY_MINED_PERCENT_THRESHOLD = 0.05;
 
 	private static final int HUGE_RADIUS = 1000000;
 
@@ -36,6 +36,8 @@ public class RobotPlayer {
 	private static final double MIN_POWER_THRESHOLD_FOR_SPAWNING = 10;
 
 	private static final double AVERAGE_BYTECODES_USED = 9000;
+
+	private static int magicNukeNumber = 19641964;
 
 	private static Direction[] GENUINE_DIRECTIONS = new Direction[] {
 		Direction.NORTH,
@@ -116,6 +118,10 @@ public class RobotPlayer {
 
 	private static int numPartialAlliedEncampments;
 
+	private static boolean enemyNukeHalfDone;
+
+	private static int numEnemyMines;
+
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
 
@@ -131,6 +137,7 @@ public class RobotPlayer {
 		RobotPlayer.myLocation = rc.getLocation();
 		RobotPlayer.random = new Random();
 		RobotPlayer.rallyPoint = mapCenter;
+		RobotPlayer.magicNukeNumber = 19641964 + mapHeight + mapWidth;
 
 		debug_endMethod();
 	}
@@ -185,8 +192,9 @@ public class RobotPlayer {
 		if (rc.isActive()) {
 
 			updateAllCaches();
+			updateNukeStatus_HQ();
 
-			decideMacroStrategy();					
+			decideMacroStrategy();	
 
 			switch(macroStrategy) {
 				case ATTACK:
@@ -205,6 +213,52 @@ public class RobotPlayer {
 		}
 
 		debug_endMethod();		
+	}
+
+	private static void updateNukeStatus_HQ() {
+		debug_startMethod();
+
+		if (!enemyNukeHalfDone) {
+			try {
+				enemyNukeHalfDone = rc.senseEnemyNukeHalfDone();
+			} catch (GameActionException e) {
+				debug_catch(e);
+			}
+		}
+
+		if (enemyNukeHalfDone) {
+			// broadcast it
+			int nukeChannel = getNukeChannel();
+			int nextChannel = nextChannel(nukeChannel);
+			try {
+				rc.broadcast(nukeChannel, magicNukeNumber);
+				rc.broadcast(nextChannel, magicNukeNumber);
+			} catch (GameActionException e) {
+				debug_catch(e);
+			}
+		}		
+
+		debug_endMethod();
+	}
+
+	private static int nextChannel(int nukeChannel) {
+		debug_startMethod();
+
+		int nextChannel = (nukeChannel + 1 + BROADCAST_MAX_CHANNELS) % BROADCAST_MAX_CHANNELS;
+
+		debug_endMethod();
+
+		return nextChannel;
+	}
+
+	private static int getNukeChannel() {
+		debug_startMethod();
+
+		int nukeChannel = nextChannel(magicNukeNumber + Clock.getRoundNum() + (17 * (mapWidth + 31 * (mapHeight * 3))));
+
+		debug_endMethod();
+
+		return nukeChannel;
 	}
 
 	private static void updateEnemyLocations() {
@@ -361,31 +415,44 @@ public class RobotPlayer {
 
 		String macroReason = "";
 
-		// TODO: enemy nuke progress
+		int currentRound = Clock.getRoundNum();
 
-		if (Clock.getRoundNum() >= ROUND_MIN_LIMIT) {
+		if (currentRound >= ROUND_MIN_LIMIT) {
 
+			macroReason = "round limit";
 			macroStrategy = MacroStrategy.ATTACK;
 
 		} else if (ourBaseIsUnderAttack()) {
 
 			macroStrategy = MacroStrategy.DEFEND;
 
-		} else if (willTakeShortTimeToReachEnemy()) {
+		} else if (enemyNukeHalfDone) {
+
+			macroReason = "enemy nuke half done";
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 10 && numUpgradesRemaining > 0) {
+		} else if (currentRound < 500 && willTakeShortTimeToReachEnemy()) {
+
+			macroReason = "short time to reach enemy";
+
+			macroStrategy = MacroStrategy.ATTACK;
+
+		} else if (currentRound < 500 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 10 && numUpgradesRemaining > 0) {
+
+			macroReason = "long time for enemy to reach us";
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
-		} else if (willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+		} else if (currentRound < 500 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+
+			macroReason = "long time for enemy to reach us";
 
 			macroStrategy = MacroStrategy.EXPAND;
 
-		} else if (Clock.getRoundNum() < 100) {
+		} else if (Clock.getRoundNum() < 50) {
 
-			macroReason = "round < 100";
+			macroReason = "round < 50";
 
 			macroStrategy = MacroStrategy.DEFEND;
 
@@ -399,7 +466,9 @@ public class RobotPlayer {
 
 		} else {
 
-			macroStrategy = MacroStrategy.ATTACK; // default
+			macroReason = "default";
+
+			macroStrategy = MacroStrategy.EXPAND; // default
 
 		}
 
@@ -452,12 +521,14 @@ public class RobotPlayer {
 	private static void updateMineLocations() {
 		debug_startMethod();
 
-		enemyMineLocations = rc.senseMineLocations(mapCenter, HUGE_RADIUS, enemyTeam);
-		nonAlliedMineLocations = rc.senseNonAlliedMineLocations(mapCenter, HUGE_RADIUS);			
-		allMineLocations = rc.senseMineLocations(mapCenter, HUGE_RADIUS, null);
+		enemyMineLocations = rc.senseMineLocations(myLocation, HUGE_RADIUS, enemyTeam);
+		nonAlliedMineLocations = rc.senseNonAlliedMineLocations(myLocation, HUGE_RADIUS);			
+		allMineLocations = rc.senseMineLocations(myLocation, HUGE_RADIUS, null);
 
 		percentAlliedMines = (allMineLocations.length - enemyMineLocations.length) / numMapLocations;
 		percentNonAlliedMines = nonAlliedMineLocations.length / numMapLocations;
+
+		numEnemyMines = enemyMineLocations.length;
 
 		debug_endMethod();
 	}
@@ -600,9 +671,9 @@ public class RobotPlayer {
 				upgradePriorities = new Upgrade[] {
 						FUSION,
 						DEFUSION,
+						PICKAXE,
 						NUKE,
 						VISION,												
-						PICKAXE,
 				};
 				break;
 			case DEFEND:
@@ -618,9 +689,9 @@ public class RobotPlayer {
 				upgradePriorities = new Upgrade[] {
 						FUSION,
 						DEFUSION,
-						VISION,												
-						NUKE,
+						VISION,	
 						PICKAXE,
+						NUKE,
 				};				
 				break;
 			case RESEARCH:
@@ -637,7 +708,7 @@ public class RobotPlayer {
 		Upgrade bestUpgrade = null;
 
 		for (Upgrade upgrade: upgradePriorities) {
-			if (upgrade == DEFUSION && percentNonAlliedMines < LIGHTLY_MINED_PERCENT_THRESHOLD) {
+			if (upgrade == DEFUSION && percentNonAlliedMines < LIGHTLY_MINED_PERCENT_THRESHOLD && numEnemyMines == 0) {
 				continue; // don't bother if there are not many mines
 			}			
 			if (!rc.hasUpgrade(upgrade)) {
@@ -659,6 +730,7 @@ public class RobotPlayer {
 			myShields = rc.getShields();	
 
 			updateAllCaches();
+			updateNukeStatus_soldier();
 
 			decideMicroStrategy();
 
@@ -700,6 +772,36 @@ public class RobotPlayer {
 		debug_endMethod();		
 	}
 
+	private static void updateNukeStatus_soldier() {
+		debug_startMethod();
+
+		if (!enemyNukeHalfDone) {
+			int nukeChannel = getNukeChannel();
+			int nextChannel = nextChannel(nukeChannel);
+
+			int message1 = 0;
+			int message2 = 0;
+			boolean couldRead = false;
+
+			try {
+				message1 = rc.readBroadcast(nukeChannel);
+				message2 = rc.readBroadcast(nextChannel);
+				couldRead = true;
+			} catch (GameActionException e) {
+				debug_catch(e);
+			}
+
+			if (couldRead) {
+				if (message1 == message2 && message2 == magicNukeNumber) {
+					enemyNukeHalfDone = true;
+				}
+			}
+
+		}
+
+		debug_endMethod();
+	}
+
 	private static void decideMicroStrategy() {
 		debug_startMethod();
 
@@ -710,12 +812,12 @@ public class RobotPlayer {
 		if (numNearbyEnemies > 0) {
 			if (numNearbyEnemies <= numNearbyAllies) {
 				microStrategy = MicroStrategy.ATTACK;
-			} else if (numNearbyEnemies > 2 * numNearbyAllies) {
+			} else if (numNearbyEnemies > 3 * numNearbyAllies) {
 				microStrategy = MicroStrategy.DEFEND;
+			} else if (distanceToEnemyHQ < UPGRADED_SENSE_RADIUS_SQUARED) {
+				microStrategy = MicroStrategy.ATTACK;
+				closestEnemyLocation = enemyHQLocation;
 			}
-		} else if (distanceToEnemyHQ < DEFAULT_SENSE_RADIUS_SQUARED) {
-			microStrategy = MicroStrategy.ATTACK;
-			closestEnemyLocation = enemyHQLocation;
 		}
 
 		debug_printf("MICRO STRATEGY IS: %s\n", microStrategy.toString());	
@@ -812,7 +914,7 @@ public class RobotPlayer {
 				boolean laying = false;
 
 				MapLocation[] adjacentAlliedMines = rc.senseMineLocations(myLocation, DIAGONALLY_ADJACENT_RADIUS, myTeam);
-				if (adjacentAlliedMines.length == 0) {
+				if (adjacentAlliedMines.length == 0 && random.nextInt(3) == 0 && numNearbyEnemies == 0) {
 					laying = tryLayMine();
 				}				
 				if (!laying) {
@@ -879,7 +981,7 @@ public class RobotPlayer {
 				location.x <= mapWidth - 8 &&
 				location.y <= mapHeight - 8) {
 
-			if (location.distanceSquaredTo(myHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
+			if ( location.distanceSquaredTo(myHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
 					location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
 					location.distanceSquaredTo(enemyHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED) {
 
