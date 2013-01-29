@@ -119,14 +119,16 @@ public class RobotPlayer {
 	    MapLocation location_in_dir_left = rc.getLocation().add(dir_left);
 	    MapLocation location_in_dir_right = rc.getLocation().add(dir_right);
 	    
-	    int dir_dist_to_enemy_hq_left = location_in_dir_left.distanceSquaredTo(rc.senseEnemyHQLocation());
-	    int dir_dist_to_enemy_hq_right = location_in_dir_right.distanceSquaredTo(rc.senseEnemyHQLocation());
-	    
+	    MapLocation enemy_hq = rc.senseEnemyHQLocation();
+	    int dir_dist_to_enemy_hq_left = location_in_dir_left.distanceSquaredTo(enemy_hq);
+	    int dir_dist_to_enemy_hq_right = location_in_dir_right.distanceSquaredTo(enemy_hq);
+
 	    Team mine_obj_at_left = rc.senseMine(location_in_dir_left);
 	    Team mine_obj_at_right = rc.senseMine(location_in_dir_right);
 	    
-	    boolean mine_at_left = (mine_obj_at_left != null) && (! mine_obj_at_left.equals(rc.getTeam()));
-	    boolean mine_at_right = (mine_obj_at_right != null) && (! mine_obj_at_right.equals(rc.getTeam()));
+	    Team my_team = rc.getTeam();	    
+	    boolean mine_at_left = (mine_obj_at_left != null) && (! mine_obj_at_left.equals(my_team));
+	    boolean mine_at_right = (mine_obj_at_right != null) && (! mine_obj_at_right.equals(my_team));
 	    
 	    // if no mines, then pick closest
 	    if (!mine_at_left && !mine_at_right) {
@@ -156,7 +158,39 @@ public class RobotPlayer {
 		    return;
 		}
 	    }	    
-		
+	    
+	    // if i get to this point there's mines in front, to the left and to the right
+	    Direction dir_left_left = dir.rotateLeft().rotateLeft();
+	    Direction dir_right_right = dir.rotateRight().rotateRight();
+	    
+	    MapLocation location_in_dir_left_left = rc.getLocation().add(dir_left_left);
+	    MapLocation location_in_dir_right_right = rc.getLocation().add(dir_right_right);
+	    
+	    int dir_dist_to_enemy_hq_left_left = location_in_dir_left_left.distanceSquaredTo(enemy_hq);
+	    int dir_dist_to_enemy_hq_right_right = location_in_dir_right_right.distanceSquaredTo(enemy_hq);
+	    
+	    Team mine_obj_at_left_left = rc.senseMine(location_in_dir_left_left);
+	    Team mine_obj_at_right_right = rc.senseMine(location_in_dir_right_right);
+	    
+	    boolean mine_at_left_left = (mine_obj_at_left_left != null) && (! mine_obj_at_left_left.equals(my_team));
+	    boolean mine_at_right_right = (mine_obj_at_right_right != null) && (! mine_obj_at_right_right.equals(my_team));
+	    
+	    if (!mine_at_left_left && !mine_at_right_right) {
+		if (dir_dist_to_enemy_hq_left_left < dir_dist_to_enemy_hq_right_right) {
+		    if (rc.canMove(dir_left_left)) {
+			rc.move(dir_left_left);
+			return;
+		    }
+		} else {
+		    if (rc.canMove(dir_right_right)) {
+			rc.move(dir_right_right);
+			return;
+		    }
+		}
+	    }
+	    
+	    // then after trying a bit to look around, just go back to normal backup movement
+
 	    for (int i = 0; i < 8; i++) {
 		    
 		MapLocation location_of_dir = rc.getLocation().add(dir);
