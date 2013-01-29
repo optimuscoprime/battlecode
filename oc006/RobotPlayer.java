@@ -132,13 +132,15 @@ public class RobotPlayer {
 
 	private static double teamPower;
 
+	private static MapLocation closestMedbayLocation;	
 	private static MapLocation closestShieldLocation;
 	private static boolean enemyHasArtillery;
 	private static double myHQEnergon;
 	private static int roundsAlive;
 	private static final double MIN_SHIELDS_TO_BEAT_ARTILLERY = 60;
+	private static final double LOW_SOLDIER_ENERGON_LEVEL = 10;
 
-	private static final int LOW_HQ_ENERGON_LEVEL = 125;
+	private static final int LOW_HQ_ENERGON_LEVEL = 60;
 
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
@@ -449,7 +451,7 @@ public class RobotPlayer {
 			macroReason = "enemy nuke half done";
 
 			macroStrategy = MacroStrategy.ATTACK;
-			
+
 		} else if (ourBaseIsUnderAttack()) {
 
 			macroStrategy = MacroStrategy.DEFEND;			
@@ -552,7 +554,7 @@ public class RobotPlayer {
 
 	private static void updateAllyLocations() {
 		allyLocations = rc.senseNearbyGameObjects(Robot.class, INFINITE_DISTANCE, myTeam);
-		nearbyAllyLocations = rc.senseNearbyGameObjects(Robot.class, UPGRADED_SENSE_RADIUS_SQUARED, myTeam);
+		nearbyAllyLocations = rc.senseNearbyGameObjects(Robot.class, DEFAULT_SENSE_RADIUS_SQUARED, myTeam);
 		numNearbyAllies = nearbyAllyLocations.length;
 
 		numAllies = allyLocations.length;
@@ -755,6 +757,9 @@ public class RobotPlayer {
 				case DEFEND:
 					decideMove_soldier_defend();
 					break;
+				case HEAL:
+					decideMove_soldier_heal();
+					break;
 				case NONE:
 					doMacro = true;
 					break;					
@@ -782,6 +787,16 @@ public class RobotPlayer {
 		}
 
 		debug_endMethod();		
+	}
+
+	private static void decideMove_soldier_heal() {
+		debug_startMethod();
+
+		if (closestMedbayLocation != null) {
+			moveToLocation(closestMedbayLocation);
+		}
+
+		debug_endMethod();
 	}
 
 	private static void updateNukeStatus_soldier() {
@@ -830,6 +845,8 @@ public class RobotPlayer {
 				microStrategy = MicroStrategy.ATTACK;
 				closestEnemyLocation = enemyHQLocation;
 			}
+		} else if (energonThisTurn < LOW_SOLDIER_ENERGON_LEVEL && closestMedbayLocation != null) {
+			microStrategy = MicroStrategy.HEAL;
 		}
 
 		rc.setIndicatorString(1, "MICRO: " + microStrategy.toString());
@@ -840,7 +857,9 @@ public class RobotPlayer {
 	private static void decideMove_soldier_attack() {
 		debug_startMethod();
 
-		if (numNearbyAllies > 3 || random.nextInt(10) == 0) {
+		// towards the end of the game, need to move in a swarm
+		if (numNearbyAllies >= (((double)currentRoundNum)/ROUND_MIN_LIMIT * 4.0)
+				|| random.nextInt(10) == 0) {
 			moveToLocation(closestEnemyLocation); 
 		} else {
 			moveToLocation(rallyPoint);
@@ -994,15 +1013,13 @@ public class RobotPlayer {
 				bestEncampmentType = SUPPLIER;
 			} else if (teamPower < HIGH_POWER_THRESHOLD) {
 				bestEncampmentType = GENERATOR;
-			} else {
+			} else if (enemyHasArtillery && closestShieldLocation == null) {
 				bestEncampmentType = SHIELDS;
+			} else {
+				bestEncampmentType = MEDBAY;
 			}
 		}
-
-		// TODO
-		// SHIELDS
-		// MEDBAY
-
+		
 		debug_endMethod();
 
 		return bestEncampmentType;
@@ -1042,10 +1059,12 @@ public class RobotPlayer {
 
 			enemyHasArtillery = false;
 			closestShieldLocation = null;
+			closestMedbayLocation = null;
 
 			closestNonAlliedEncampmentLocation = null;
 			int shortestDistance = INFINITE_DISTANCE;
 			int shortestShieldDistance = INFINITE_DISTANCE;
+			int shortestMedbayDistance = INFINITE_DISTANCE;
 
 			numEnemyEncampments = 0;
 
@@ -1119,6 +1138,13 @@ public class RobotPlayer {
 								if (distance < shortestShieldDistance) {
 									shortestShieldDistance = distance;
 									closestShieldLocation = encampmentLocation;
+								}									
+							} else if (robotInfo.type == MEDBAY) {
+								int distance = myLocation.distanceSquaredTo(encampmentLocation);
+
+								if (distance < shortestMedbayDistance) {
+									shortestMedbayDistance = distance;
+									closestMedbayLocation = encampmentLocation;
 								}									
 							}
 						}	
