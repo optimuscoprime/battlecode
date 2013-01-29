@@ -80,8 +80,6 @@ public class RobotPlayer {
 
 	private static MapLocation[] allEncampmentLocations;
 
-	private static MapLocation[] alliedEncampmentLocations;
-
 	private static MapLocation closestNonAlliedEncampmentLocation;
 
 	private static double percentAlliedMines;
