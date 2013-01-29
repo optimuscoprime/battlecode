@@ -54,6 +54,7 @@ Battlecode
 * Copy one of the players into the directory `teams/team219` (and make sure the package name is changed to `team219`)
 * Type `ant build` and `ant run` etc. to test the new team219
 * In the Battlecode2013 directory, type: `ant -Dteam=team219 jar` and it will create a `submission.jar` file that you can submit on the website
+* Go to the "Upload Player" page and upload it
 * Go to the "Matches" page and click "Search" (empty search)
 * Click a bunch of checkboxes using tab and space, or paste this into the Chrome developer console: `$("form#challenge input[type='checkbox'][name='teams']").attr("checked", true)`
 * Run some ranked and unranked games (unranked games will usually autoaccept, but good players will usually not play unranked games)
