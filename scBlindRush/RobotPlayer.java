@@ -92,14 +92,22 @@ public class RobotPlayer {
 	if (rc.isActive()) {
 	    GameObject [] enemiesNearPlayer = rc.senseNearbyGameObjects(Robot.class, 10, rc.getTeam().opponent());
 
+	    MapLocation enemy_hq = rc.senseEnemyHQLocation();
+
 	    Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
 
-	    if (enemiesNearPlayer.length > 0) {
-		
+	    boolean be_wary_disarming_mines = false;
+	    if (enemiesNearPlayer.length == 1) {
+		if (rc.senseLocationOf(enemiesNearPlayer[0]) != enemy_hq) {
+		    be_wary_disarming_mines = true;
+		}
+	    } else if (enemiesNearPlayer.length > 0) {
+		be_wary_disarming_mines = true;
+	    }
+	    
+	    if (be_wary_disarming_mines) {
 		MapLocation anEnemy = rc.senseLocationOf(enemiesNearPlayer[0]);
-
-		dir = rc.getLocation().directionTo(anEnemy);
-
+		dir = rc.getLocation().directionTo(anEnemy);		
 	    }
 	    
 	    boolean rotating_left_on_cant_move = (Math.random() < 0.5);	    
@@ -119,7 +127,6 @@ public class RobotPlayer {
 	    MapLocation location_in_dir_left = rc.getLocation().add(dir_left);
 	    MapLocation location_in_dir_right = rc.getLocation().add(dir_right);
 	    
-	    MapLocation enemy_hq = rc.senseEnemyHQLocation();
 	    int dir_dist_to_enemy_hq_left = location_in_dir_left.distanceSquaredTo(enemy_hq);
 	    int dir_dist_to_enemy_hq_right = location_in_dir_right.distanceSquaredTo(enemy_hq);
 
