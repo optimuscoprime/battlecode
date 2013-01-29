@@ -1,10 +1,10 @@
-package team219;
+package oc006;
 
 import java.util.*;
 
 import battlecode.common.*;
 
-import static team219.Util.*;
+import static oc006.Util.*;
 import static battlecode.common.GameConstants.*;
 import static battlecode.common.Direction.*;
 import static battlecode.common.Team.*;
