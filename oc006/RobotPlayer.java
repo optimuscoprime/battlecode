@@ -38,7 +38,7 @@ public class RobotPlayer {
 
 	private static final double AVERAGE_BYTECODES_USED = 5000;
 
-	
+
 
 	private static final double CAPTURE_ENCAMPMENT_MIN_POWER = CAPTURE_POWER_COST * 1.5;
 
@@ -132,6 +132,10 @@ public class RobotPlayer {
 
 	private static double teamPower;
 
+	private static MapLocation closestShieldLocation;
+	private static boolean enemyHasArtillery;
+	private static final double MIN_SHIELDS_TO_BEAT_ARTILLERY = 60;
+
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
 
@@ -145,7 +149,8 @@ public class RobotPlayer {
 		RobotPlayer.mapCenter = new MapLocation((myHQLocation.x + enemyHQLocation.x) / 2, (myHQLocation.y + enemyHQLocation.y) / 2);
 		RobotPlayer.numMapLocations = mapWidth * mapHeight;
 		RobotPlayer.myLocation = rc.getLocation();
-		RobotPlayer.random = new Random();
+
+		RobotPlayer.random = new Random(myLocation.x + 37 * myLocation.y);
 
 		RobotPlayer.rallyPoint = new MapLocation((int) (0.75 * myHQLocation.x + 0.25 * enemyHQLocation.x),
 				(int) (0.75 * myHQLocation.y + 0.25 * enemyHQLocation.y));
@@ -468,7 +473,7 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.DEFEND;
 
-		} else if (numAlliedSoldiers >= 10 && numAlliedEncampments > 0 && numUpgradesRemaining > 0) {
+		} else if (numAlliedSoldiers >= 5 && numAlliedEncampments > 0 && numUpgradesRemaining > 0) {
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
@@ -830,7 +835,9 @@ public class RobotPlayer {
 	private static void decideMove_soldier_attack() {
 		debug_startMethod();
 
-		if (numNearbyAllies > 3 || random.nextInt(10) == 0) {
+		if (enemyHasArtillery && closestShieldLocation != null && myShields < MIN_SHIELDS_TO_BEAT_ARTILLERY) {
+			moveToLocation(closestShieldLocation); 
+		} else if (numNearbyAllies > 3 || random.nextInt(10) == 0) {
 			moveToLocation(closestEnemyLocation); 
 		} else {
 			moveToLocation(rallyPoint);
@@ -975,10 +982,12 @@ public class RobotPlayer {
 			bestEncampmentType = ARTILLERY;
 		} else {
 			// favour suppliers
-			if (numAlliedSuppliers <= (numAlliedGenerators * 4) || teamPower > HIGH_POWER_THRESHOLD) {
+			if (teamPower > LOW_POWER_THRESHOLD && numAlliedSuppliers <= (numAlliedGenerators * 4)) {
 				bestEncampmentType = SUPPLIER;
-			} else {
+			} else if (teamPower < HIGH_POWER_THRESHOLD) {
 				bestEncampmentType = GENERATOR;
+			} else {
+				bestEncampmentType = SHIELDS;
 			}
 		}
 
@@ -1017,7 +1026,7 @@ public class RobotPlayer {
 		debug_startMethod();
 
 		// this is an extremely expensive function, do it very occasonally
-		if (!hasUpdatedEncampments || currentRoundNum % 100 == 0) {
+		if (!hasUpdatedEncampments || currentRoundNum % 50 == 0) {
 
 			hasUpdatedEncampments = true;
 
@@ -1025,6 +1034,7 @@ public class RobotPlayer {
 
 			closestNonAlliedEncampmentLocation = null;
 			int shortestDistance = INFINITE_DISTANCE;
+			int shortestShieldDistance = INFINITE_DISTANCE;
 
 			numEnemyEncampments = 0;
 
@@ -1041,42 +1051,64 @@ public class RobotPlayer {
 				} catch (GameActionException e) {
 					debug_catch(e);
 				}
-				if (gameObject == null || gameObject.getTeam() != myTeam) {
-					if (gameObject != null) {
-						numEnemyEncampments++;
-					} else {
-						numEnemyEncampments += 0.5;
-					}
-					int distance = myLocation.distanceSquaredTo(encampmentLocation);
 
+				if (gameObject == null) {
+					numEnemyEncampments += 0.5;
+
+					int distance = myLocation.distanceSquaredTo(encampmentLocation);
 					if (distance < shortestDistance) {
 						shortestDistance = distance;
 						closestNonAlliedEncampmentLocation = encampmentLocation;
-					}				
-				} else if (gameObject != null && gameObject.getTeam() == myTeam) {
+					}							
+				} else {
+
+					RobotInfo robotInfo = null;
 					if (gameObject instanceof Robot) {
-						RobotInfo info = null;
 						try {
-							info = rc.senseRobotInfo((Robot)gameObject);
+							robotInfo = rc.senseRobotInfo((Robot)gameObject);
 						} catch (GameActionException e) {
 							debug_catch(e);
 						}
-						if (info != null) {
-							if (info.type != SOLDIER && info.type != HQ) {
+					}
+
+					if (gameObject.getTeam() != myTeam) {
+						numEnemyEncampments++;
+						
+						if (robotInfo != null) {
+							if (robotInfo.type == ARTILLERY) {
+								enemyHasArtillery = true;
+							}
+						}						
+						
+						int distance = myLocation.distanceSquaredTo(encampmentLocation);
+						if (distance < shortestDistance) {
+							shortestDistance = distance;
+							closestNonAlliedEncampmentLocation = encampmentLocation;
+						}	
+					} else {
+						if (robotInfo != null) {
+							if (robotInfo.type != SOLDIER && robotInfo.type != HQ) {
 								numAlliedEncampments++;
 							}
 
-							if (info.type == GENERATOR) {
+							if (robotInfo.type == GENERATOR) {
 								numAlliedGenerators ++;
-							} else if (info.type == SUPPLIER) {
+							} else if (robotInfo.type == SUPPLIER) {
 								numAlliedSuppliers ++;
-							} else if (info.type == SOLDIER && gameObject.getID() == rc.getRobot().getID()) {
+							} else if (robotInfo.type == SOLDIER && gameObject.getID() == rc.getRobot().getID()) {
 								int distance = myLocation.distanceSquaredTo(encampmentLocation);
 
 								if (distance < shortestDistance) {
 									shortestDistance = distance;
 									closestNonAlliedEncampmentLocation = encampmentLocation;
 								}								
+							} else if (robotInfo.type == SHIELDS) {
+								int distance = myLocation.distanceSquaredTo(encampmentLocation);
+
+								if (distance < shortestShieldDistance) {
+									shortestShieldDistance = distance;
+									closestShieldLocation = encampmentLocation;
+								}									
 							}
 						}	
 					}
@@ -1195,7 +1227,7 @@ public class RobotPlayer {
 
 		updateAllCaches();
 
-		if (teamPower < LOW_POWER_THRESHOLD && random.nextInt(10) == 0) {
+		if (teamPower < LOW_POWER_THRESHOLD && random.nextInt(20) == 0) {
 			rc.suicide();
 		}
 
@@ -1226,13 +1258,13 @@ public class RobotPlayer {
 
 	private static void decideMove_generator() {
 		debug_startMethod();
-		
+
 		updateAllCaches();
 
-		if (teamPower > HIGH_POWER_THRESHOLD && random.nextInt(10) == 0) {
+		if (teamPower > HIGH_POWER_THRESHOLD && random.nextInt(30) == 0) {
 			rc.suicide();
 		}
-		
+
 		debug_endMethod();		
 	}	
 
