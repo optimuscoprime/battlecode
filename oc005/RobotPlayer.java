@@ -29,13 +29,14 @@ public class RobotPlayer {
 	private static final double HEAVILY_MINED_PERCENT_THRESHOLD = 0.8;
 	private static final double LIGHTLY_MINED_PERCENT_THRESHOLD = 0.05;
 
-	private static final int HUGE_RADIUS = 1000000;
+	private static final int INFINITE_DISTANCE = 9999999;
+	private static final int INFINITE_RADIUS = INFINITE_DISTANCE;
 
 	private static final double SHIELD_ARTILLERY_THRESHOLD = 65;
 
 	private static final double MIN_POWER_THRESHOLD_FOR_SPAWNING = 10;
 
-	private static final double AVERAGE_BYTECODES_USED = 9000;
+	private static final double AVERAGE_BYTECODES_USED = 5000;
 
 	private static int magicNukeNumber = 19641964;
 
@@ -75,7 +76,6 @@ public class RobotPlayer {
 
 	private static Robot[] allEnemyLocations;
 
-	private static MapLocation soldierWaypoint;
 	private static MapLocation rallyPoint;
 
 	private static MapLocation[] allEncampmentLocations;
@@ -122,6 +122,8 @@ public class RobotPlayer {
 
 	private static int numEnemyMines;
 
+	private static boolean hasUpdatedEncampments;
+
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
 
@@ -138,6 +140,7 @@ public class RobotPlayer {
 		RobotPlayer.random = new Random();
 		RobotPlayer.rallyPoint = mapCenter;
 		RobotPlayer.magicNukeNumber = 19641964 + mapHeight + mapWidth;
+		RobotPlayer.allEncampmentLocations = rc.senseAllEncampmentSquares();
 
 		debug_endMethod();
 	}
@@ -176,7 +179,7 @@ public class RobotPlayer {
 				decideMove_shields();
 				break;
 			case SOLDIER:
-				decideMove_solder();
+				decideMove_soldier();
 				break;
 			case SUPPLIER:
 				decideMove_supplier();
@@ -264,7 +267,7 @@ public class RobotPlayer {
 	private static void updateEnemyLocations() {
 		debug_startMethod();
 
-		allEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, HUGE_RADIUS, enemyTeam);
+		allEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, INFINITE_DISTANCE, enemyTeam);
 		nearbyEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, UPGRADED_SENSE_RADIUS_SQUARED, enemyTeam);
 		numNearbyEnemies = 0;
 
@@ -374,7 +377,7 @@ public class RobotPlayer {
 		debug_startMethod();
 
 		Direction bestDirection = NONE;
-		int smallestDistance = -1;
+		int smallestDistance = INFINITE_DISTANCE;
 
 		for (Direction direction: Direction.values()) {
 			MapLocation newLocation = myHQLocation.add(direction);
@@ -395,7 +398,7 @@ public class RobotPlayer {
 					distanceSquared *= 2; // penalise distances that hurt us
 				}				
 
-				if (smallestDistance == -1 || distanceSquared < smallestDistance) {
+				if (distanceSquared < smallestDistance) {
 					smallestDistance = distanceSquared;
 					bestDirection = direction;
 				}
@@ -432,19 +435,19 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (currentRound < 500 && willTakeShortTimeToReachEnemy()) {
+		} else if (currentRound < 200 && willTakeShortTimeToReachEnemy()) {
 
 			macroReason = "short time to reach enemy";
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (currentRound < 500 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 10 && numUpgradesRemaining > 0) {
+		} else if (currentRound < 200 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 10 && numUpgradesRemaining > 0) {
 
 			macroReason = "long time for enemy to reach us";
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
-		} else if (currentRound < 500 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+		} else if (currentRound < 200 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
 
 			macroReason = "long time for enemy to reach us";
 
@@ -521,9 +524,9 @@ public class RobotPlayer {
 	private static void updateMineLocations() {
 		debug_startMethod();
 
-		enemyMineLocations = rc.senseMineLocations(myLocation, HUGE_RADIUS, enemyTeam);
-		nonAlliedMineLocations = rc.senseNonAlliedMineLocations(myLocation, HUGE_RADIUS);			
-		allMineLocations = rc.senseMineLocations(myLocation, HUGE_RADIUS, null);
+		enemyMineLocations = rc.senseMineLocations(myLocation, INFINITE_DISTANCE, enemyTeam);
+		nonAlliedMineLocations = rc.senseNonAlliedMineLocations(myLocation, INFINITE_DISTANCE);			
+		allMineLocations = rc.senseMineLocations(myLocation, INFINITE_DISTANCE, null);
 
 		percentAlliedMines = (allMineLocations.length - enemyMineLocations.length) / numMapLocations;
 		percentNonAlliedMines = nonAlliedMineLocations.length / numMapLocations;
@@ -534,13 +537,13 @@ public class RobotPlayer {
 	}
 
 	private static void updateAllyLocations() {
-		allyLocations = rc.senseNearbyGameObjects(Robot.class, HUGE_RADIUS, myTeam);
+		allyLocations = rc.senseNearbyGameObjects(Robot.class, INFINITE_DISTANCE, myTeam);
 		nearbyAllyLocations = rc.senseNearbyGameObjects(Robot.class, UPGRADED_SENSE_RADIUS_SQUARED, myTeam);
 		numNearbyAllies = nearbyAllyLocations.length;
 
 		numAllies = allyLocations.length;
 
-		int shortestDistance = -1;
+		int shortestDistance = INFINITE_DISTANCE;
 		closestAllyLocation = rallyPoint;
 		numAlliedSoldiers = 0;
 		numPartialAlliedEncampments = 0;
@@ -565,7 +568,7 @@ public class RobotPlayer {
 					}
 				}
 				int distance = myLocation.distanceSquaredTo(allyInfo.location);
-				if (shortestDistance == -1 || distance < shortestDistance) {
+				if (distance < shortestDistance) {
 					shortestDistance = distance;
 					closestAllyLocation = allyInfo.location;
 				}
@@ -722,7 +725,7 @@ public class RobotPlayer {
 		return bestUpgrade;
 	}
 
-	private static void decideMove_solder() {
+	private static void decideMove_soldier() {
 		debug_startMethod();
 
 		if (rc.isActive()) {	
@@ -840,9 +843,6 @@ public class RobotPlayer {
 
 	private static void decideMove_soldier_defend() {
 		debug_startMethod();
-
-		// reset waypoint
-		soldierWaypoint = myHQLocation;
 
 		if (microStrategy == MicroStrategy.DEFEND) {
 			moveToLocation(closestAllyLocation); 
@@ -996,89 +996,79 @@ public class RobotPlayer {
 		return shouldBuildArtillery;
 	}
 
-	private static void decideMove_soldier_research() {
-		debug_startMethod();
-
-		if (soldierWaypoint != null) {
-			if (myLocation.equals(soldierWaypoint)) {
-				soldierWaypoint = null;
-			}
-		}
-
-		if (soldierWaypoint == null) {
-			pickNewSoldierWaypoint();
-		}
-
-		moveToLocation(soldierWaypoint);
-
-		debug_endMethod();
-	}
-
-
 	private static void updateEncampmentLocations() {
 		debug_startMethod();
 
-		allEncampmentLocations = rc.senseAllEncampmentSquares();
-		alliedEncampmentLocations = rc.senseAlliedEncampmentSquares();
+		// this is an extremely expensive function, do it very occasonally
+		if (!hasUpdatedEncampments || Clock.getRoundNum() % 50 == 0) {
 
-		numAlliedEncampments = alliedEncampmentLocations.length;
+			hasUpdatedEncampments = true;
 
-		closestNonAlliedEncampmentLocation = null;
-		int shortestDistance = -1;
+			numAlliedEncampments = 0;
 
-		numEnemyEncampments = 0;
+			closestNonAlliedEncampmentLocation = null;
+			int shortestDistance = INFINITE_DISTANCE;
 
-		numAlliedGenerators = 0;
-		numAlliedSuppliers = 0;
+			numEnemyEncampments = 0;
 
-		for (MapLocation encampmentLocation : allEncampmentLocations) {
-			GameObject gameObject = null;
-			try {
-				if (rc.canSenseSquare(encampmentLocation)) {
-					gameObject = rc.senseObjectAtLocation(encampmentLocation);
-				}
-			} catch (GameActionException e) {
-				debug_catch(e);
-			}
-			if (gameObject == null || gameObject.getTeam() != myTeam) {
-				if (gameObject != null) {
-					numEnemyEncampments++;
-				} else {
-					numEnemyEncampments += 0.5;
-				}
-				int distance = myLocation.distanceSquaredTo(encampmentLocation);
+			numAlliedGenerators = 0;
+			numAlliedSuppliers = 0;
 
-				if (shortestDistance == -1 || distance < shortestDistance) {
-					shortestDistance = distance;
-					closestNonAlliedEncampmentLocation = encampmentLocation;
-				}				
-			} else if (gameObject != null && gameObject.getTeam() == myTeam) {
-				if (gameObject instanceof Robot) {
-					RobotInfo info = null;
-					try {
-						info = rc.senseRobotInfo((Robot)gameObject);
-					} catch (GameActionException e) {
-						debug_catch(e);
+			for (MapLocation encampmentLocation : allEncampmentLocations) {
+
+				GameObject gameObject = null;
+				try {
+					if (rc.canSenseSquare(encampmentLocation)) {
+						gameObject = rc.senseObjectAtLocation(encampmentLocation);
 					}
-					if (info != null) {
-						if (info.type == GENERATOR) {
-							numAlliedGenerators ++;
-						} else if (info.type == SUPPLIER) {
-							numAlliedSuppliers ++;
-						} else if (info.type == SOLDIER && gameObject.getID() == rc.getRobot().getID()) {
-							int distance = myLocation.distanceSquaredTo(encampmentLocation);
+				} catch (GameActionException e) {
+					debug_catch(e);
+				}
+				if (gameObject == null || gameObject.getTeam() != myTeam) {
+					if (gameObject != null) {
+						numEnemyEncampments++;
+					} else {
+						numEnemyEncampments += 0.5;
+					}
+					int distance = myLocation.distanceSquaredTo(encampmentLocation);
 
-							if (shortestDistance == -1 || distance < shortestDistance) {
-								shortestDistance = distance;
-								closestNonAlliedEncampmentLocation = encampmentLocation;
-							}								
+					if (distance < shortestDistance) {
+						shortestDistance = distance;
+						closestNonAlliedEncampmentLocation = encampmentLocation;
+					}				
+				} else if (gameObject != null && gameObject.getTeam() == myTeam) {
+					if (gameObject instanceof Robot) {
+						RobotInfo info = null;
+						try {
+							info = rc.senseRobotInfo((Robot)gameObject);
+						} catch (GameActionException e) {
+							debug_catch(e);
 						}
-					}	
+						if (info != null) {
+							if (info.type != SOLDIER && info.type != HQ) {
+								numAlliedEncampments++;
+							}
+
+							if (info.type == GENERATOR) {
+								numAlliedGenerators ++;
+							} else if (info.type == SUPPLIER) {
+								numAlliedSuppliers ++;
+							} else if (info.type == SOLDIER && gameObject.getID() == rc.getRobot().getID()) {
+								int distance = myLocation.distanceSquaredTo(encampmentLocation);
+
+								if (distance < shortestDistance) {
+									shortestDistance = distance;
+									closestNonAlliedEncampmentLocation = encampmentLocation;
+								}								
+							}
+						}	
+					}
 				}
 			}
-		}
 
-		numAvailableEncampments = allEncampmentLocations.length - numAlliedEncampments - numEnemyEncampments;
+			numAvailableEncampments = allEncampmentLocations.length - numAlliedEncampments - numEnemyEncampments;
+
+		}
 
 		debug_endMethod();
 	}
@@ -1115,7 +1105,7 @@ public class RobotPlayer {
 		debug_startMethod();
 
 		Direction bestDirection = null;
-		int shortestDistance = -1;
+		int shortestDistance = INFINITE_DISTANCE;
 
 		boolean hasDefusion = rc.hasUpgrade(DEFUSION);
 
@@ -1135,7 +1125,7 @@ public class RobotPlayer {
 						}
 					}
 				}
-				if (shortestDistance == -1 || distance < shortestDistance) {
+				if (distance < shortestDistance) {
 					shortestDistance = distance;
 					bestDirection = direction;
 				}
@@ -1146,16 +1136,6 @@ public class RobotPlayer {
 
 		return bestDirection;
 	}
-
-	private static void pickNewSoldierWaypoint() {
-		debug_startMethod();
-
-		int x = random.nextInt(mapHeight);
-		int y = random.nextInt(mapWidth);
-		soldierWaypoint = new MapLocation(x,y);
-
-		debug_endMethod();
-	}	
 
 	private static void updateNumUpgradesRemaining() {
 		debug_startMethod();
@@ -1193,12 +1173,6 @@ public class RobotPlayer {
 	private static void decideMove_supplier() {
 		debug_startMethod();
 
-		updateAllCaches();
-
-		if (numAlliedSuppliers > numAlliedGenerators + 4) {
-			//rc.suicide();
-		}		
-
 		debug_endMethod();
 	}	
 
@@ -1226,13 +1200,6 @@ public class RobotPlayer {
 
 	private static void decideMove_generator() {
 		debug_startMethod();
-
-		updateAllCaches();
-
-		if (numAlliedGenerators > numAlliedSuppliers + 4) {
-			// rc.suicide();
-		}
-
 		debug_endMethod();		
 	}	
 

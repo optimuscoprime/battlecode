@@ -51,7 +51,7 @@ public class Util {
 		int bytecodesUsed = bytecodesNow - bytecodesBefore;
 		StackTraceElement[] stackTraceElements = new Throwable().getStackTrace();
 		String methodName = stackTraceElements[1].getMethodName();
-		if (bytecodesUsed >= 5000) {
+		if (bytecodesUsed >= 1000) {
 			debug_printf("%d bytecodes were used by %s\n", bytecodesUsed, methodName);
 		}
 	}	
