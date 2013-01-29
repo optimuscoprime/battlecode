@@ -4,22 +4,30 @@ import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
+import battlecode.common.GameObject;
 import battlecode.common.MapLocation;
+import battlecode.common.Robot;
 import battlecode.common.RobotController;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
 import battlecode.common.Upgrade;
 
-public class RobotPlayer {    
-    public static void run(RobotController rc) {
+public class RobotPlayer {
+        
+    private static RobotController rc;
+
+    public static void run(RobotController rcrc) {
+	
+	rc = rcrc;
+	
 	while (true) {
 	    try {
 		int clock_round = Clock.getRoundNum();
 
 		if (rc.getType() == RobotType.HQ) {
-		    HQPlayer(rc);
+		    HQPlayer();
 		} else if (rc.getType() == RobotType.SOLDIER) {
-		    ScoutPlayer(rc);
+		    ScoutPlayer();
 		}
 
 		// End turn
@@ -30,7 +38,7 @@ public class RobotPlayer {
 	}
     }
     
-    public static void HQPlayer(RobotController rc) throws Exception {
+    public static void HQPlayer() throws Exception {
 	if (rc.isActive()) {
 	    
 	    // Spawn a soldier
@@ -38,8 +46,13 @@ public class RobotPlayer {
 	    
 	    for (int i = 0; i < 8; i++) {			    
 		if (rc.canMove(dir)) {
-		    rc.spawn(dir);
-		    break;
+		    MapLocation loc_in_dir = rc.getLocation().add(dir);
+		    
+		    if (rc.senseMine(loc_in_dir) == null) {
+			rc.spawn(dir);
+			break;
+		    }
+		    dir = dir.rotateRight();
 		} else {
 		    dir = dir.rotateLeft();
 		}
@@ -50,8 +63,8 @@ public class RobotPlayer {
     private static int closest_settlement_x = -1;
     private static int closest_settlement_y = -1;
     
-    public static void SupplierPlayer(RobotController rc) throws Exception {
-	
+    public static void SupplierPlayer() throws Exception {
+
 	if (closest_settlement_y < 0) {
 	    int map_width = rc.getMapWidth();
 	    int map_height = rc.getMapHeight();
@@ -74,26 +87,31 @@ public class RobotPlayer {
 	
     }
 
-    public static void ScoutPlayer(RobotController rc) throws Exception {
-		    
-	/// MapLocation[] senseNonAlliedMineLocations(MapLocation center, int radiusSquared)
+    public static void ScoutPlayer() throws Exception {
 		    
 	if (rc.isActive()) {
-	    MapLocation enemy_hq = rc.senseEnemyHQLocation();
+	    GameObject [] enemiesNearPlayer = rc.senseNearbyGameObjects(Robot.class, 10, rc.getTeam().opponent());
 
-	    boolean rotating_left_on_cant_move = (Math.random() < 0.5);
-				    	    	    
-	    // aim to move directly towards enemy HQ
-	    Direction dir = rc.getLocation().directionTo(enemy_hq);
+	    Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+
+	    if (enemiesNearPlayer.length > 0) {
+		
+		MapLocation anEnemy = rc.senseLocationOf(enemiesNearPlayer[0]);
+
+		dir = rc.getLocation().directionTo(anEnemy);
+
+	    }
+	    
+	    boolean rotating_left_on_cant_move = (Math.random() < 0.5);	    
 	    MapLocation location_in_dir = rc.getLocation().add(dir);
-
+	    
 	    if (rc.canMove(dir)) {
 		if (rc.senseMine(location_in_dir) == null) {
 		    rc.move(dir);
 		    return;
 		}
 	    }
-	    	    	    	    
+		
 	    // but also give yourself a few options if you can't move where you want
 	    Direction dir_left = dir.rotateLeft();
 	    Direction dir_right = dir.rotateRight();
@@ -101,8 +119,8 @@ public class RobotPlayer {
 	    MapLocation location_in_dir_left = rc.getLocation().add(dir_left);
 	    MapLocation location_in_dir_right = rc.getLocation().add(dir_right);
 	    
-	    int dir_dist_to_enemy_hq_left = location_in_dir_left.distanceSquaredTo(enemy_hq);
-	    int dir_dist_to_enemy_hq_right = location_in_dir_right.distanceSquaredTo(enemy_hq);
+	    int dir_dist_to_enemy_hq_left = location_in_dir_left.distanceSquaredTo(rc.senseEnemyHQLocation());
+	    int dir_dist_to_enemy_hq_right = location_in_dir_right.distanceSquaredTo(rc.senseEnemyHQLocation());
 	    
 	    Team mine_obj_at_left = rc.senseMine(location_in_dir_left);
 	    Team mine_obj_at_right = rc.senseMine(location_in_dir_right);
@@ -124,31 +142,33 @@ public class RobotPlayer {
 		    }
 		}
 	    } 
-
+		
 	    if (mine_at_left && !mine_at_right) {
 		if (rc.canMove(dir_right)) {
 		    rc.move(dir_right);
 		    return;
 		}
 	    }
-
+		
 	    if (mine_at_right && !mine_at_left) {
 		if (rc.canMove(dir_left)) {
 		    rc.move(dir_left);
 		    return;
 		}
 	    }	    
-
+		
 	    for (int i = 0; i < 8; i++) {
-
+		    
 		MapLocation location_of_dir = rc.getLocation().add(dir);
 		Team mine_obj_in_dir = rc.senseMine(location_of_dir);
-		
+		    
 		if (mine_obj_in_dir != null && (! mine_obj_in_dir.equals(rc.getTeam()))) {
-		    rc.defuseMine(location_of_dir);
+		    if (enemiesNearPlayer.length == 0) {
+			rc.defuseMine(location_of_dir);
+		    }
 		    break;
 		} else {
-				
+			
 		    if (rc.canMove(dir)) {
 			rc.move(dir);
 			break;
