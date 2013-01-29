@@ -135,9 +135,10 @@ public class RobotPlayer {
 	private static MapLocation closestShieldLocation;
 	private static boolean enemyHasArtillery;
 	private static double myHQEnergon;
+	private static int roundsAlive;
 	private static final double MIN_SHIELDS_TO_BEAT_ARTILLERY = 60;
 
-	private static final int LOW_HQ_ENERGON_LEVEL = 250;
+	private static final int LOW_HQ_ENERGON_LEVEL = 125;
 
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
@@ -206,6 +207,7 @@ public class RobotPlayer {
 		}
 
 		energonLastTurn = rc.getEnergon();
+		roundsAlive++;
 
 		debug_endMethod();
 	}
@@ -442,15 +444,15 @@ public class RobotPlayer {
 			macroReason = "round limit";
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (ourBaseIsUnderAttack()) {
-
-			macroStrategy = MacroStrategy.DEFEND;
-
 		} else if (enemyNukeHalfDone) {
 
 			macroReason = "enemy nuke half done";
 
 			macroStrategy = MacroStrategy.ATTACK;
+			
+		} else if (ourBaseIsUnderAttack()) {
+
+			macroStrategy = MacroStrategy.DEFEND;			
 
 		} else if (currentRoundNum < 200 && willTakeShortTimeToReachEnemy()) {
 
@@ -964,7 +966,7 @@ public class RobotPlayer {
 
 		boolean defusing = false;
 
-		if (currentRoundNum == 0 || energonLastTurn == energonThisTurn || random.nextInt(5) == 0) {
+		if (roundsAlive == 0 || energonLastTurn == energonThisTurn || random.nextInt(5) == 0) {
 			// usually don't try to defuse a mine if we have been attacked recently		
 			try {
 				rc.defuseMine(location);
