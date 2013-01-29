@@ -134,7 +134,10 @@ public class RobotPlayer {
 
 	private static MapLocation closestShieldLocation;
 	private static boolean enemyHasArtillery;
+	private static double myHQEnergon;
 	private static final double MIN_SHIELDS_TO_BEAT_ARTILLERY = 60;
+
+	private static final int LOW_HQ_ENERGON_LEVEL = 250;
 
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
@@ -615,7 +618,7 @@ public class RobotPlayer {
 		boolean ourBaseIsUnderAttack = false;
 
 		Robot[] enemiesNearOurHQ = rc.senseNearbyGameObjects(Robot.class, myHQLocation, UPGRADED_SENSE_RADIUS_SQUARED, enemyTeam);
-		if (enemiesNearOurHQ.length > 0) {
+		if (myHQEnergon < LOW_HQ_ENERGON_LEVEL || enemiesNearOurHQ.length > 0) {
 			ourBaseIsUnderAttack = true;
 		}
 
@@ -1220,6 +1223,12 @@ public class RobotPlayer {
 		energonThisTurn = rc.getEnergon();
 		currentRoundNum = Clock.getRoundNum();
 		teamPower = rc.getTeamPower();
+
+		try {
+			myHQEnergon = rc.senseRobotInfo((Robot) rc.senseObjectAtLocation(myHQLocation)).energon;
+		} catch (GameActionException e) {
+			debug_catch(e);
+		}
 
 		updateEnemyLocations();
 		updateEncampmentLocations();
