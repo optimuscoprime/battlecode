@@ -127,6 +127,8 @@ public class RobotPlayer {
 
 	private static int currentRoundNum;
 
+	private static double teamPower;
+
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
 
@@ -141,7 +143,10 @@ public class RobotPlayer {
 		RobotPlayer.numMapLocations = mapWidth * mapHeight;
 		RobotPlayer.myLocation = rc.getLocation();
 		RobotPlayer.random = new Random();
-		RobotPlayer.rallyPoint = mapCenter;
+
+		RobotPlayer.rallyPoint = new MapLocation((int) (0.75 * myHQLocation.x + 0.25 * enemyHQLocation.x),
+				(int) (0.75 * myHQLocation.y + 0.25 * enemyHQLocation.y));
+
 		RobotPlayer.magicNukeNumber = 19641964 + mapHeight + mapWidth;
 		RobotPlayer.allEncampmentLocations = rc.senseAllEncampmentSquares();
 
@@ -322,8 +327,6 @@ public class RobotPlayer {
 
 		/* only if we can pay the upkeep */
 
-		double teamPower = rc.getTeamPower();
-
 		if (teamPower > MIN_POWER_THRESHOLD_FOR_SPAWNING &&
 				teamPower > (UNIT_POWER_UPKEEP * numAllies) &&
 				teamPower > (POWER_COST_PER_BYTECODE * AVERAGE_BYTECODES_USED * numAllies)) {
@@ -488,7 +491,7 @@ public class RobotPlayer {
 
 		double encampmentCaptureCost = CAPTURE_POWER_COST  * ( 1 + numAlliedEncampments);
 
-		boolean lotsOfExcessPower = (rc.getTeamPower() > encampmentCaptureCost);
+		boolean lotsOfExcessPower = (teamPower > encampmentCaptureCost);
 
 		debug_endMethod();
 
@@ -968,7 +971,7 @@ public class RobotPlayer {
 			bestEncampmentType = ARTILLERY;
 		} else {
 			// favour suppliers
-			if (numAlliedSuppliers <= numAlliedGenerators * 3) {
+			if (numAlliedSuppliers <= (numAlliedGenerators * 4)) {
 				bestEncampmentType = SUPPLIER;
 			} else {
 				bestEncampmentType = GENERATOR;
@@ -1172,14 +1175,15 @@ public class RobotPlayer {
 
 	private static void updateAllCaches() {
 
+		energonThisTurn = rc.getEnergon();
+		currentRoundNum = Clock.getRoundNum();
+		teamPower = rc.getTeamPower();
+
 		updateEnemyLocations();
 		updateEncampmentLocations();
 		updateMineLocations();
 		updateAllyLocations();
 		updateNumUpgradesRemaining();
-
-		energonThisTurn = rc.getEnergon();
-		currentRoundNum = Clock.getRoundNum();
 	}
 
 	private static void decideMove_supplier() {
