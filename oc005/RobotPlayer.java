@@ -475,7 +475,6 @@ public class RobotPlayer {
 
 		}
 
-		debug_printf("MACRO STRATEGY IS: %s\n", macroStrategy.toString());
 		rc.setIndicatorString(0, "MACRO: " + macroStrategy.toString() + " (" + macroReason + ")");
 
 		debug_endMethod();
@@ -499,8 +498,6 @@ public class RobotPlayer {
 		boolean willTakeLongTimeForEnemyToReachUs = false;
 
 		int distanceFromOurHQToClosestEnemy = closestEnemyLocation.distanceSquaredTo(myHQLocation);
-
-		debug_printf("distance from our HQ to closest enemy is %d\n", distanceFromOurHQToClosestEnemy);
 
 		if (distanceFromOurHQToClosestEnemy > HQ_RAW_DISTANCE_BIG_DISTANCE) {
 
@@ -583,8 +580,6 @@ public class RobotPlayer {
 		boolean willTakeShortTimeToReachEnemy = false;
 
 		int distanceFromOurHQToClosestEnemy = closestEnemyLocation.distanceSquaredTo(myHQLocation);
-
-		debug_printf("distance from our base to closest enemy: %d\n", distanceFromOurHQToClosestEnemy);
 
 		if (distanceFromOurHQToClosestEnemy < HQ_RAW_DISTANCE_TINY_DISTANCE) {
 
@@ -823,7 +818,6 @@ public class RobotPlayer {
 			}
 		}
 
-		debug_printf("MICRO STRATEGY IS: %s\n", microStrategy.toString());	
 		rc.setIndicatorString(1, "MICRO: " + microStrategy.toString());
 
 		debug_endMethod();
