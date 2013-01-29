@@ -27,10 +27,9 @@ public class RobotPlayer {
 	private static final int DIRECTLY_ADJACENT_RADIUS = 1;
 
 	private static final double HEAVILY_MINED_PERCENT_THRESHOLD = 0.8;
-	private static final double LIGHTLY_MINED_PERCENT_THRESHOLD = 0.05;
+	private static final double LIGHTLY_MINED_PERCENT_THRESHOLD = 0.2;
 
 	private static final int INFINITE_DISTANCE = 9999999;
-	private static final int INFINITE_RADIUS = INFINITE_DISTANCE;
 
 	private static final double SHIELD_ARTILLERY_THRESHOLD = 65;
 
@@ -665,38 +664,38 @@ public class RobotPlayer {
 		switch(macroStrategy) {
 			case ATTACK:
 				upgradePriorities = new Upgrade[] {
+						VISION,																		
 						FUSION,
 						DEFUSION,
 						PICKAXE,
 						NUKE,
-						VISION,												
 				};
 				break;
 			case DEFEND:
 				upgradePriorities = new Upgrade[] {
+						VISION,						
 						FUSION,
 						PICKAXE,
 						DEFUSION,						
 						NUKE,
-						VISION					
 				};				
 				break;
 			case EXPAND:
 				upgradePriorities = new Upgrade[] {
+						VISION,							
 						FUSION,
 						DEFUSION,
-						VISION,	
 						PICKAXE,
 						NUKE,
 				};				
 				break;
 			case RESEARCH:
 				upgradePriorities = new Upgrade[] {
+						VISION,												
 						FUSION,						
 						DEFUSION,
 						PICKAXE,
 						NUKE,						
-						VISION						
 				};				
 				break;
 		}
@@ -808,7 +807,7 @@ public class RobotPlayer {
 		if (numNearbyEnemies > 0) {
 			if (numNearbyEnemies <= numNearbyAllies) {
 				microStrategy = MicroStrategy.ATTACK;
-			} else if (numNearbyEnemies > 3 * numNearbyAllies) {
+			} else if (numNearbyEnemies > 1.5 * numNearbyAllies) {
 				microStrategy = MicroStrategy.DEFEND;
 			} else if (distanceToEnemyHQ < UPGRADED_SENSE_RADIUS_SQUARED) {
 				microStrategy = MicroStrategy.ATTACK;
@@ -824,11 +823,7 @@ public class RobotPlayer {
 	private static void decideMove_soldier_attack() {
 		debug_startMethod();
 
-		if (microStrategy == MicroStrategy.ATTACK) {
-			moveToLocation(closestEnemyLocation); 
-		} else {
-			moveToLocation(closestEnemyLocation); 
-		}
+		moveToLocation(closestEnemyLocation); 
 
 		debug_endMethod();
 	}	
@@ -837,14 +832,17 @@ public class RobotPlayer {
 		debug_startMethod();
 
 		if (microStrategy == MicroStrategy.DEFEND) {
+
 			moveToLocation(closestAllyLocation); 
+
 		} else {
 
 			int distanceToMyHQ = myHQLocation.distanceSquaredTo(myLocation);
 
 			boolean layingMine = false;
 
-			if (distanceToMyHQ <= UPGRADED_SENSE_RADIUS_SQUARED && numNearbyEnemies == 0) {
+			if (distanceToMyHQ <= ARTILLERY_SENSE_RADIUS_SQUARED && numNearbyEnemies == 0 &&
+					farAwayFromMapEdge(myLocation)) {
 				Team mineStatus = rc.senseMine(myLocation);
 				if (mineStatus == null) {
 					layingMine = tryLayMine();
@@ -858,6 +856,16 @@ public class RobotPlayer {
 
 		debug_endMethod();
 	}	
+
+	private static boolean farAwayFromMapEdge(MapLocation location) {
+		debug_startMethod();
+
+		boolean farAway = location.x >= 8 &&  location.y >= 8 && location.x <= mapWidth - 8 && location.y <= mapHeight - 8;
+
+		debug_endMethod();
+
+		return farAway;
+	}
 
 	private static boolean tryLayMine() {
 		debug_startMethod();
@@ -882,17 +890,20 @@ public class RobotPlayer {
 		if (closestNonAlliedEncampmentLocation != null) {
 			if (myLocation.equals(closestNonAlliedEncampmentLocation)) {
 
+				boolean safePosition = numNearbyEnemies == 0;
+
 				// try to defuse
 				boolean defusing = false;
-				MapLocation[] adjacentNonAlliedMines = rc.senseNonAlliedMineLocations(myLocation, DIAGONALLY_ADJACENT_RADIUS);
 
-				if (adjacentNonAlliedMines.length > 4) {
-					defusing = tryDefuseMine(adjacentNonAlliedMines[0]);
+				if (safePosition) {
+					MapLocation[] adjacentNonAlliedMines = rc.senseNonAlliedMineLocations(myLocation, DIAGONALLY_ADJACENT_RADIUS);
+
+					if (adjacentNonAlliedMines.length > 4) {
+						defusing = tryDefuseMine(adjacentNonAlliedMines[0]);
+					}
 				}
 
-				boolean safeToCapture = numNearbyEnemies == 0;
-
-				if (!defusing && safeToCapture) {
+				if (safePosition && !defusing) {
 					RobotType bestEncampmentType = findBestEncampmentType();
 					try {
 						rc.captureEncampment(bestEncampmentType);
@@ -910,12 +921,11 @@ public class RobotPlayer {
 					laying = tryLayMine();
 				}				
 				if (!laying) {
-
 					moveToLocation(closestNonAlliedEncampmentLocation);
 				}
 			}
 		} else {
-			moveToLocation(rallyPoint);
+			moveToLocation(rallyPoint); // is this wise?
 		}
 
 		debug_endMethod();
@@ -968,10 +978,7 @@ public class RobotPlayer {
 
 		boolean shouldBuildArtillery = false;
 
-		if ( location.x >= 8 && 
-				location.y >= 8 &&
-				location.x <= mapWidth - 8 &&
-				location.y <= mapHeight - 8) {
+		if ( farAwayFromMapEdge(location) ) {
 
 			if ( location.distanceSquaredTo(myHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
 					location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
