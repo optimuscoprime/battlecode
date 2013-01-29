@@ -835,9 +835,7 @@ public class RobotPlayer {
 	private static void decideMove_soldier_attack() {
 		debug_startMethod();
 
-		if (enemyHasArtillery && closestShieldLocation != null && myShields < MIN_SHIELDS_TO_BEAT_ARTILLERY) {
-			moveToLocation(closestShieldLocation); 
-		} else if (numNearbyAllies > 3 || random.nextInt(10) == 0) {
+		if (numNearbyAllies > 3 || random.nextInt(10) == 0) {
 			moveToLocation(closestEnemyLocation); 
 		} else {
 			moveToLocation(rallyPoint);
@@ -868,7 +866,12 @@ public class RobotPlayer {
 			}
 
 			if (!layingMine) {
-				moveToLocation(myHQLocation);
+
+				if (enemyHasArtillery && closestShieldLocation != null && myShields < MIN_SHIELDS_TO_BEAT_ARTILLERY) {
+					moveToLocation(closestShieldLocation); 
+				} else {
+					moveToLocation(myHQLocation);
+				}
 			}
 		}
 
@@ -1032,6 +1035,9 @@ public class RobotPlayer {
 
 			numAlliedEncampments = 0;
 
+			enemyHasArtillery = false;
+			closestShieldLocation = null;
+
 			closestNonAlliedEncampmentLocation = null;
 			int shortestDistance = INFINITE_DISTANCE;
 			int shortestShieldDistance = INFINITE_DISTANCE;
@@ -1073,13 +1079,13 @@ public class RobotPlayer {
 
 					if (gameObject.getTeam() != myTeam) {
 						numEnemyEncampments++;
-						
+
 						if (robotInfo != null) {
 							if (robotInfo.type == ARTILLERY) {
 								enemyHasArtillery = true;
 							}
 						}						
-						
+
 						int distance = myLocation.distanceSquaredTo(encampmentLocation);
 						if (distance < shortestDistance) {
 							shortestDistance = distance;
