@@ -38,10 +38,6 @@ public class RobotPlayer {
 
 	private static final double AVERAGE_BYTECODES_USED = 5000;
 
-
-
-	private static final double CAPTURE_ENCAMPMENT_MIN_POWER = CAPTURE_POWER_COST * 1.5;
-
 	private static int magicNukeNumber = 19641964;
 
 	private static double energonLastTurn;
@@ -138,7 +134,7 @@ public class RobotPlayer {
 	private static double myHQEnergon;
 	private static int roundsAlive;
 	private static final double MIN_SHIELDS_TO_BEAT_ARTILLERY = 60;
-	private static final double LOW_SOLDIER_ENERGON_LEVEL = 10;
+	private static final double LOW_SOLDIER_ENERGON_LEVEL = 30;
 
 	private static final int LOW_HQ_ENERGON_LEVEL = 60;
 
@@ -845,7 +841,7 @@ public class RobotPlayer {
 				microStrategy = MicroStrategy.ATTACK;
 				closestEnemyLocation = enemyHQLocation;
 			}
-		} else if (energonThisTurn < LOW_SOLDIER_ENERGON_LEVEL && closestMedbayLocation != null) {
+		} else if (energonThisTurn <= LOW_SOLDIER_ENERGON_LEVEL && closestMedbayLocation != null) {
 			microStrategy = MicroStrategy.HEAL;
 		}
 
@@ -905,7 +901,12 @@ public class RobotPlayer {
 	private static boolean farAwayFromMapEdge(MapLocation location) {
 		debug_startMethod();
 
-		boolean farAway = location.x >= 8 &&  location.y >= 8 && location.x <= mapWidth - 8 && location.y <= mapHeight - 8;
+		int epsilon = 4;
+
+		boolean farAway = (location.x >= epsilon && 
+				location.y >= epsilon &&
+				location.x <= mapWidth - epsilon &&
+				location.y <= mapHeight - epsilon);
 
 		debug_endMethod();
 
@@ -935,7 +936,7 @@ public class RobotPlayer {
 	private static void decideMove_soldier_expand() {
 		debug_startMethod();
 
-		if (teamPower > CAPTURE_ENCAMPMENT_MIN_POWER && closestNonAlliedEncampmentLocation != null) {
+		if (teamPower > LOW_POWER_THRESHOLD && closestNonAlliedEncampmentLocation != null) {
 
 			if (myLocation.equals(closestNonAlliedEncampmentLocation)) {
 
@@ -1005,21 +1006,23 @@ public class RobotPlayer {
 
 		RobotType bestEncampmentType = GENERATOR;
 
-		if (artilleryUsefulAtLocation(myLocation)) {
+		if (artilleryUsefulAtLocation(myLocation) && random.nextInt(2) == 0) {
 			bestEncampmentType = ARTILLERY;
 		} else {
 			// favour suppliers
-			if (teamPower > LOW_POWER_THRESHOLD && numAlliedSuppliers <= (numAlliedGenerators * 4)) {
+			if (closestMedbayLocation == null) {
+				bestEncampmentType = MEDBAY;
+			} else if (enemyHasArtillery && closestShieldLocation == null) {
+				bestEncampmentType = SHIELDS;
+			} else if (numAlliedSuppliers <= (numAlliedGenerators * 4)) {
 				bestEncampmentType = SUPPLIER;
 			} else if (teamPower < HIGH_POWER_THRESHOLD) {
 				bestEncampmentType = GENERATOR;
-			} else if (enemyHasArtillery && closestShieldLocation == null) {
-				bestEncampmentType = SHIELDS;
 			} else {
-				bestEncampmentType = MEDBAY;
+				bestEncampmentType = SUPPLIER;
 			}
 		}
-		
+
 		debug_endMethod();
 
 		return bestEncampmentType;
@@ -1030,16 +1033,13 @@ public class RobotPlayer {
 
 		boolean shouldBuildArtillery = false;
 
-		if ( farAwayFromMapEdge(location) ) {
+		if ( location.distanceSquaredTo(myHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
+				location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
+				location.distanceSquaredTo(enemyHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED) {
 
-			if ( location.distanceSquaredTo(myHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
-					location.distanceSquaredTo(mapCenter) <= ARTILLERY_SENSE_RADIUS_SQUARED ||
-					location.distanceSquaredTo(enemyHQLocation) <= ARTILLERY_SENSE_RADIUS_SQUARED) {
+			// don't build artillery at edge of map, useless?
 
-				// don't build artillery at edge of map, useless?
-
-				shouldBuildArtillery = true;
-			}
+			shouldBuildArtillery = true;
 		}
 
 		debug_endMethod();	
