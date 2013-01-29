@@ -37,7 +37,11 @@ public class RobotPlayer {
 
 	private static final double AVERAGE_BYTECODES_USED = 5000;
 
+	private static final double LOW_POWER_THRESHOLD = 5;
+
 	private static int magicNukeNumber = 19641964;
+
+	private static double energonLastTurn;
 
 	private static Direction[] GENUINE_DIRECTIONS = new Direction[] {
 		Direction.NORTH,
@@ -117,9 +121,11 @@ public class RobotPlayer {
 
 	private static boolean enemyNukeHalfDone;
 
-	private static int numEnemyMines;
-
 	private static boolean hasUpdatedEncampments;
+
+	private static double energonThisTurn;
+
+	private static int currentRoundNum;
 
 	private static void initialise(RobotController rc) {
 		debug_startMethod();
@@ -182,6 +188,8 @@ public class RobotPlayer {
 				decideMove_supplier();
 				break;
 		}
+
+		energonLastTurn = rc.getEnergon();
 
 		debug_endMethod();
 	}
@@ -254,7 +262,7 @@ public class RobotPlayer {
 	private static int getNukeChannel() {
 		debug_startMethod();
 
-		int nukeChannel = nextChannel(magicNukeNumber + Clock.getRoundNum() + (17 * (mapWidth + 31 * (mapHeight * 3))));
+		int nukeChannel = nextChannel(magicNukeNumber + currentRoundNum + (17 * (mapWidth + 31 * (mapHeight * 3))));
 
 		debug_endMethod();
 
@@ -415,9 +423,7 @@ public class RobotPlayer {
 
 		String macroReason = "";
 
-		int currentRound = Clock.getRoundNum();
-
-		if (currentRound >= ROUND_MIN_LIMIT) {
+		if (currentRoundNum >= ROUND_MIN_LIMIT) {
 
 			macroReason = "round limit";
 			macroStrategy = MacroStrategy.ATTACK;
@@ -432,25 +438,25 @@ public class RobotPlayer {
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (currentRound < 200 && willTakeShortTimeToReachEnemy()) {
+		} else if (currentRoundNum < 200 && willTakeShortTimeToReachEnemy()) {
 
 			macroReason = "short time to reach enemy";
 
 			macroStrategy = MacroStrategy.ATTACK;
 
-		} else if (currentRound < 100 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 2 && numUpgradesRemaining > 0) {
+		} else if (currentRoundNum < 100 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= 2 && numUpgradesRemaining > 0) {
 
 			macroReason = "long time for enemy to reach us";
 
 			macroStrategy = MacroStrategy.RESEARCH;			
 
-		} else if (currentRound < 100 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
+		} else if (currentRoundNum < 100 && willTakeLongTimeForEnemyToReachUs && numAlliedSoldiers >= (2 + (2 * numAlliedEncampments + numPartialAlliedEncampments)) && numAvailableEncampments > 0 && lotsOfExcessPower()) {
 
 			macroReason = "long time for enemy to reach us";
 
 			macroStrategy = MacroStrategy.EXPAND;
 
-		} else if (Clock.getRoundNum() < 50) {
+		} else if (currentRoundNum < 50) {
 
 			macroReason = "round < 50";
 
@@ -524,8 +530,6 @@ public class RobotPlayer {
 
 		percentAlliedMines = (allMineLocations.length - enemyMineLocations.length) / numMapLocations;
 		percentNonAlliedMines = nonAlliedMineLocations.length / numMapLocations;
-
-		numEnemyMines = enemyMineLocations.length;
 
 		debug_endMethod();
 	}
@@ -702,10 +706,7 @@ public class RobotPlayer {
 
 		Upgrade bestUpgrade = null;
 
-		for (Upgrade upgrade: upgradePriorities) {
-			if (upgrade == DEFUSION && percentNonAlliedMines < LIGHTLY_MINED_PERCENT_THRESHOLD && numEnemyMines == 0) {
-				continue; // don't bother if there are not many mines
-			}			
+		for (Upgrade upgrade: upgradePriorities) {	
 			if (!rc.hasUpgrade(upgrade)) {
 				bestUpgrade = upgrade;
 				break;
@@ -823,7 +824,11 @@ public class RobotPlayer {
 	private static void decideMove_soldier_attack() {
 		debug_startMethod();
 
-		moveToLocation(closestEnemyLocation); 
+		if (numNearbyAllies > 2 || random.nextInt(5) == 0) {
+			moveToLocation(closestEnemyLocation); 
+		} else {
+			moveToLocation(rallyPoint);
+		}
 
 		debug_endMethod();
 	}	
@@ -872,12 +877,15 @@ public class RobotPlayer {
 
 		boolean layingMine = false;
 
-		try {
-			rc.layMine();
-			layingMine = true;
-		} catch (GameActionException e) {
-			debug_catch(e);
-		}		
+		if (currentRoundNum == 0 || energonLastTurn == energonThisTurn || random.nextInt(5) == 0) {
+			// usually don't try to lay a mine if we have been attacked recently
+			try {
+				rc.layMine();
+				layingMine = true;
+			} catch (GameActionException e) {
+				debug_catch(e);
+			}		
+		}
 
 		debug_endMethod();
 
@@ -898,7 +906,7 @@ public class RobotPlayer {
 				if (safePosition) {
 					MapLocation[] adjacentNonAlliedMines = rc.senseNonAlliedMineLocations(myLocation, DIAGONALLY_ADJACENT_RADIUS);
 
-					if (adjacentNonAlliedMines.length > 4) {
+					if (adjacentNonAlliedMines.length > 2) {
 						defusing = tryDefuseMine(adjacentNonAlliedMines[0]);
 					}
 				}
@@ -936,11 +944,14 @@ public class RobotPlayer {
 
 		boolean defusing = false;
 
-		try {
-			rc.defuseMine(location);
-			defusing = true;
-		} catch (GameActionException e) {
-			debug_catch(e);
+		if (currentRoundNum == 0 || energonLastTurn == energonThisTurn || random.nextInt(5) == 0) {
+			// usually don't try to defuse a mine if we have been attacked recently		
+			try {
+				rc.defuseMine(location);
+				defusing = true;
+			} catch (GameActionException e) {
+				debug_catch(e);
+			}
 		}
 
 		debug_endMethod();		
@@ -957,7 +968,7 @@ public class RobotPlayer {
 			bestEncampmentType = ARTILLERY;
 		} else {
 			// favour suppliers
-			if (numAlliedSuppliers <= numAlliedGenerators * 2) {
+			if (numAlliedSuppliers <= numAlliedGenerators * 3) {
 				bestEncampmentType = SUPPLIER;
 			} else {
 				bestEncampmentType = GENERATOR;
@@ -999,7 +1010,7 @@ public class RobotPlayer {
 		debug_startMethod();
 
 		// this is an extremely expensive function, do it very occasonally
-		if (!hasUpdatedEncampments || Clock.getRoundNum() % 50 == 0) {
+		if (!hasUpdatedEncampments || currentRoundNum % 100 == 0) {
 
 			hasUpdatedEncampments = true;
 
@@ -1167,10 +1178,18 @@ public class RobotPlayer {
 		updateAllyLocations();
 		updateNumUpgradesRemaining();
 
+		energonThisTurn = rc.getEnergon();
+		currentRoundNum = Clock.getRoundNum();
 	}
 
 	private static void decideMove_supplier() {
 		debug_startMethod();
+
+		if (rc.getTeamPower() < LOW_POWER_THRESHOLD) {
+			if (random.nextInt(5) == 0) {
+				rc.suicide();
+			}
+		}
 
 		debug_endMethod();
 	}	
