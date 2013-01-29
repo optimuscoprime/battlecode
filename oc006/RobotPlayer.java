@@ -975,7 +975,7 @@ public class RobotPlayer {
 			bestEncampmentType = ARTILLERY;
 		} else {
 			// favour suppliers
-			if (numAlliedSuppliers <= (numAlliedGenerators * 4) || teamPower > LOTS_OF_POWER_THRESHOLD) {
+			if (numAlliedSuppliers <= (numAlliedGenerators * 4) || teamPower > HIGH_POWER_THRESHOLD) {
 				bestEncampmentType = SUPPLIER;
 			} else {
 				bestEncampmentType = GENERATOR;
