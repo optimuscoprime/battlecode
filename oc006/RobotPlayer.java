@@ -13,7 +13,8 @@ import static battlecode.common.Upgrade.*;
 
 public class RobotPlayer {
 
-	private static final int LOTS_OF_EXCESS_POWER_THRESHOLD = 500;
+	private static final int HIGH_POWER_THRESHOLD = 1000;
+	private static final double LOW_POWER_THRESHOLD = 60;
 
 	private static final int HQ_RAW_DISTANCE_BIG_DISTANCE = 6000;
 	private static final int HQ_RAW_DISTANCE_MEDIUM_DISTANCE = HQ_RAW_DISTANCE_BIG_DISTANCE / 2;	
@@ -37,7 +38,7 @@ public class RobotPlayer {
 
 	private static final double AVERAGE_BYTECODES_USED = 5000;
 
-	private static final double LOW_POWER_THRESHOLD = 50;
+	
 
 	private static final double CAPTURE_ENCAMPMENT_MIN_POWER = CAPTURE_POWER_COST * 1.5;
 
@@ -829,7 +830,7 @@ public class RobotPlayer {
 	private static void decideMove_soldier_attack() {
 		debug_startMethod();
 
-		if (numNearbyAllies > 2 || random.nextInt(5) == 0) {
+		if (numNearbyAllies > 3 || random.nextInt(10) == 0) {
 			moveToLocation(closestEnemyLocation); 
 		} else {
 			moveToLocation(rallyPoint);
@@ -974,7 +975,7 @@ public class RobotPlayer {
 			bestEncampmentType = ARTILLERY;
 		} else {
 			// favour suppliers
-			if (numAlliedSuppliers <= (numAlliedGenerators * 4)) {
+			if (numAlliedSuppliers <= (numAlliedGenerators * 4) || teamPower > LOTS_OF_POWER_THRESHOLD) {
 				bestEncampmentType = SUPPLIER;
 			} else {
 				bestEncampmentType = GENERATOR;
@@ -1194,7 +1195,7 @@ public class RobotPlayer {
 
 		updateAllCaches();
 
-		if (teamPower < LOW_POWER_THRESHOLD && random.nextInt(5) == 0) {
+		if (teamPower < LOW_POWER_THRESHOLD && random.nextInt(10) == 0) {
 			rc.suicide();
 		}
 
@@ -1225,6 +1226,13 @@ public class RobotPlayer {
 
 	private static void decideMove_generator() {
 		debug_startMethod();
+		
+		updateAllCaches();
+
+		if (teamPower > HIGH_POWER_THRESHOLD && random.nextInt(10) == 0) {
+			rc.suicide();
+		}
+		
 		debug_endMethod();		
 	}	
 
