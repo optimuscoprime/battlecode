@@ -16,7 +16,7 @@ DEBUG = false
 # -- specify a custom list of teams to all play each other
 # -- Leave this as empty (which is '[]') to make all teams in 'teams/' directory play each other.
 # custom_list_of_teams = []
-custom_list_of_teams = [ "bbSwarmImproved3", "oc006", "oc005", "bbSwarmImproved2", "bbSwarm", "scBlindRush", "defendNuke" ]
+custom_list_of_teams = [ "team219", "bbSwarmImproved2", "oc005", "oc006", "bbSwarmImproved3", "bbSwarm", "scBlindRush", "defendNuke" ]
 #custom_list_of_teams =  config.['custom_list_of_teams']
 custom_list_of_maps = []
 #custom_list_of_maps = ["simple","Ulaanbaatar","Kleenex"]
