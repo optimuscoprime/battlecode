@@ -444,7 +444,8 @@ lookAround: for (int d:directionOffsets){
 								break lookAround;
                      if(d == Direction.NONE)
 								break lookAround;
-							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d != Direction.NONE)){
+							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d !=
+                     Direction.NONE)&&(rc.senseMine(rc.getLocation().add(d)) == null) ){
 								rc.spawn(d);
                         //System.out.println("friendlies" + numFriendlies + "spawning");
 								break lookAround;
