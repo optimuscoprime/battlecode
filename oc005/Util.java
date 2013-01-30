@@ -22,8 +22,8 @@ public class Util {
 	// use bc.conf to turn debug mode on
 	public static void debug_printf(String format, Object ... objects) {
 		//System.out.printf("ROUND %d\n", Clock.getRoundNum());
-		System.out.printf(format, objects);
-		System.out.printf("\n");
+		//System.out.printf(format, objects);
+		//System.out.printf("\n");
 	}	
 
 	public static void debug_catch(Exception e) {
