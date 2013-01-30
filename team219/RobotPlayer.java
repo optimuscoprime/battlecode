@@ -1,6 +1,12 @@
 package team219;
+
 /*
-Artillery tries not to do friendly fire etc
+Based largely on the example swarm2 player fromm lecture slides.
+- Also try to use medbays though if injured.
+- And use artillery if lots of enemies around but not too close.
+- artillery strategy is a bit simple.
+- first unit or two are scouts incase we're facing a nukebot.
+
 */
 
 
@@ -25,7 +31,7 @@ public class RobotPlayer{
    static int OFFSET_MED = 2;
    static int OFFSET_THREAT = 3;
    static int OFFSET_ART = 4;
-   static int RUSH_ROUND = 150;
+   static int RUSH_ROUND = 200;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
@@ -49,10 +55,7 @@ public class RobotPlayer{
 					medbayCode();
 				}else if (rc.getType()==RobotType.ARTILLERY){
 					artilleryCode();
-				}else if (rc.getType()==RobotType.SHIELDS){
-					shieldCode();
 				}
-
 
 			}catch (Exception e){
 				System.out.println("caught exception before it killed us:");
@@ -110,7 +113,7 @@ public class RobotPlayer{
                      if (Math.random()<.1)
                         finalDir = finalDir.rotateRight();
                      boolean okToDefuse=(nearbyEnemies.length < 1)||
-                     ( (allies.length > (3 * nearbyEnemies.length) )&& (rc.getRobot().getID()%2
+                     ( (allies.length > (3 * nearbyEnemies.length) )&& (rc.getRobot().getID()%3
                      ==0) );
                      simpleMove(finalDir, myLoc, okToDefuse);
                   
@@ -335,7 +338,7 @@ public class RobotPlayer{
                   rc.captureEncampment(RobotType.ARTILLERY);
          }else if(existingMed < 1){
                   rc.captureEncampment(RobotType.MEDBAY); 
-         }else if((existingShield<2)&&(Clock.getRoundNum()>200)){
+         }else if((existingShield<2)&&(Clock.getRoundNum()<300)){
             rc.captureEncampment(RobotType.SHIELDS); 
          }else if((Math.random()<.7)&& (existingGens<6)){
             rc.captureEncampment(RobotType.GENERATOR); 
@@ -442,8 +445,7 @@ lookAround: for (int d:directionOffsets){
 								break lookAround;
                      if(d == Direction.NONE)
 								break lookAround;
-							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d !=
-                     Direction.NONE)&&(rc.senseMine(rc.getLocation().add(d)) == null)){
+							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d != Direction.NONE)){
 								rc.spawn(d);
                         //System.out.println("friendlies" + numFriendlies + "spawning");
 								break lookAround;
@@ -524,7 +526,7 @@ lookAround: for (int d:directionOffsets){
                   roundsSinceUsed=0;
                }
             //}
-            if((roundsSinceUsed > 100) && (rc.getTeamPower() < 50 )){
+            if((roundsSinceUsed > 200) && (rc.getTeamPower() < 50 )){
                rc.suicide();
             }
 
@@ -535,32 +537,6 @@ lookAround: for (int d:directionOffsets){
 			rc.yield();
 		}
 	}
-  	private static void shieldCode(){
-		MapLocation myLoc = rc.getLocation();
-      int roundsSinceUsed=0;
-		while(true){
-			try{
-				
-            //if (rc.isActive()) {
-               // See how long since a friendly's been adjacent.  Suidice if > 100 & teampower low.
-               Robot[] allies = rc.senseNearbyGameObjects(Robot.class,4,rc.getTeam());
-               if(allies.length <2){//often encampments next to medbays.
-                  roundsSinceUsed++;
-               }else{
-                  roundsSinceUsed=0;
-               }
-            //}
-            if((roundsSinceUsed > 100)){
-               rc.suicide();
-            }
-
-			}catch (Exception e){
-				System.out.println("Soldier Exception");
-				e.printStackTrace();
-			}
-			rc.yield();
-		}
-	} 
    private static void artilleryCode(){
       MapLocation myLoc = rc.getLocation();
       while(true){
@@ -569,31 +545,9 @@ lookAround: for (int d:directionOffsets){
             if (rc.isActive()) {
 
                Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class,RobotType.ARTILLERY.attackRadiusMaxSquared,rc.getTeam().opponent());
-               int bestScore=-100;
-               if(nearbyEnemies.length > 0){
-                  MapLocation target=findClosest(nearbyEnemies);
-                  MapLocation bestTarget=null;
-lookAround: for (Direction d:Direction.values()){
-               if(d == Direction.OMNI)
-                  break lookAround;
-               MapLocation tryTarget=target.add(d);
-               Robot[] allies = rc.senseNearbyGameObjects(Robot.class,tryTarget, 2,rc.getTeam());
-               Robot[] enemies = rc.senseNearbyGameObjects(Robot.class,tryTarget, 2,rc.getTeam().opponent());
-               int score=enemies.length-allies.length;
-               if(rc.canSenseSquare(tryTarget)){
-                  GameObject center=rc.senseObjectAtLocation(tryTarget);
-                  if(center !=null)
-                     if(center.getTeam()==rc.getTeam().opponent())
-                        score++;
-               }
-               if( (rc.getLocation().distanceSquaredTo(tryTarget) <=RobotType.ARTILLERY.attackRadiusMaxSquared)&&(score>bestScore)){
-                  bestScore=score;
-                  bestTarget=tryTarget;
-               }
                
-            }
-                  if(bestTarget!= null)
-                     rc.attackSquare(bestTarget);
+               if(nearbyEnemies.length > 0){
+                  rc.attackSquare(findClosest(nearbyEnemies));
                }
             }
          }catch (Exception e){
