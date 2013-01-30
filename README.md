@@ -3,6 +3,8 @@
 Battlecode
 ==========
 
+NOTE: Our final submitted AI is in the `team219` directory (it is `bbSwarmImproved2`)
+
 [Drop Bears (#219)](https://www.battlecode.org/contestants/teams/219)
 
 ## Official Documentation
