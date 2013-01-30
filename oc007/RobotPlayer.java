@@ -30,7 +30,7 @@ public class RobotPlayer {
 	private static final double HEAVILY_MINED_PERCENT_THRESHOLD = 0.8;
 	private static final double LIGHTLY_MINED_PERCENT_THRESHOLD = 0.2;
 
-	private static final int INFINITE_DISTANCE = 9999999;
+	private static final int INFINITY = 9999999;
 
 	private static final double SHIELD_ARTILLERY_THRESHOLD = 65;
 
@@ -289,7 +289,7 @@ public class RobotPlayer {
 	private static void updateEnemyLocations() {
 		debug_startMethod();
 
-		allEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, INFINITE_DISTANCE, enemyTeam);
+		allEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, INFINITY, enemyTeam);
 		nearbyEnemyLocations = rc.senseNearbyGameObjects(Robot.class, myLocation, UPGRADED_SENSE_RADIUS_SQUARED, enemyTeam);
 		numNearbyEnemies = 0;
 
@@ -397,7 +397,7 @@ public class RobotPlayer {
 		debug_startMethod();
 
 		Direction bestDirection = NONE;
-		int smallestDistance = INFINITE_DISTANCE;
+		int smallestDistance = INFINITY;
 
 		for (Direction direction: GENUINE_DIRECTIONS) {
 			MapLocation newLocation = myHQLocation.add(direction);
@@ -555,9 +555,9 @@ public class RobotPlayer {
 	private static void updateMineLocations() {
 		debug_startMethod();
 
-		enemyMineLocations = rc.senseMineLocations(myLocation, INFINITE_DISTANCE, enemyTeam);
-		nonAlliedMineLocations = rc.senseNonAlliedMineLocations(myLocation, INFINITE_DISTANCE);			
-		allMineLocations = rc.senseMineLocations(myLocation, INFINITE_DISTANCE, null);
+		enemyMineLocations = rc.senseMineLocations(myLocation, INFINITY, enemyTeam);
+		nonAlliedMineLocations = rc.senseNonAlliedMineLocations(myLocation, INFINITY);			
+		allMineLocations = rc.senseMineLocations(myLocation, INFINITY, null);
 
 		percentAlliedMines = (allMineLocations.length - enemyMineLocations.length) / numMapLocations;
 		percentNonAlliedMines = nonAlliedMineLocations.length / numMapLocations;
@@ -566,13 +566,13 @@ public class RobotPlayer {
 	}
 
 	private static void updateAllyLocations() {
-		allyLocations = rc.senseNearbyGameObjects(Robot.class, INFINITE_DISTANCE, myTeam);
+		allyLocations = rc.senseNearbyGameObjects(Robot.class, INFINITY, myTeam);
 		nearbyAllyLocations = rc.senseNearbyGameObjects(Robot.class, DEFAULT_SENSE_RADIUS_SQUARED, myTeam);
 		numNearbyAllies = nearbyAllyLocations.length;
 
 		numAllies = allyLocations.length;
 
-		int shortestDistance = INFINITE_DISTANCE;
+		int shortestDistance = INFINITY;
 		closestAllyLocation = rallyPoint;
 		numAlliedSoldiers = 0;
 		numPartialAlliedEncampments = 0;
@@ -872,7 +872,32 @@ public class RobotPlayer {
 		// towards the end of the game, need to move in a swarm
 		if (numNearbyAllies >= Math.floor(((double)currentRoundNum)/ROUND_MIN_LIMIT * 5.0)
 				|| random.nextInt(10) == 0) {
-			moveToLocation(closestEnemyLocation); 
+
+			MapLocation bestEnemyLocationToAttack = closestEnemyLocation; // default
+
+			int lowestEnemiesAdjacentToEnemy = INFINITY;
+
+			for (Robot nearbyEnemy: nearbyEnemyLocations) {
+				RobotInfo robotInfo = null;
+				try {
+					if (rc.canSenseObject(nearbyEnemy)) {
+						robotInfo = rc.senseRobotInfo(nearbyEnemy);
+					}
+				} catch (GameActionException e) {
+					debug_catch(e);
+				}
+				if (robotInfo != null) {
+					// check all its adjacent squares
+					Robot[] adjacentEnemies = rc.senseNearbyGameObjects(Robot.class, robotInfo.location, DIAGONALLY_ADJACENT_RADIUS, enemyTeam);
+					int numAdjacentEnemies = adjacentEnemies.length;
+					if (numAdjacentEnemies < lowestEnemiesAdjacentToEnemy) {
+						lowestEnemiesAdjacentToEnemy = numAdjacentEnemies;
+						bestEnemyLocationToAttack = robotInfo.location;
+					}
+				}
+			}			
+
+			moveToLocation(bestEnemyLocationToAttack); 
 		} else {
 			moveToLocation(rallyPoint);
 		}
@@ -1078,9 +1103,9 @@ public class RobotPlayer {
 			closestMedbayLocation = null;
 
 			closestNonAlliedEncampmentLocation = null;
-			int shortestDistance = INFINITE_DISTANCE;
-			int shortestShieldDistance = INFINITE_DISTANCE;
-			int shortestMedbayDistance = INFINITE_DISTANCE;
+			int shortestDistance = INFINITY;
+			int shortestShieldDistance = INFINITY;
+			int shortestMedbayDistance = INFINITY;
 
 			numEnemyEncampments = 0;
 
@@ -1209,7 +1234,7 @@ public class RobotPlayer {
 		debug_startMethod();
 
 		Direction bestDirection = null;
-		int shortestDistance = INFINITE_DISTANCE;
+		int shortestDistance = INFINITY;
 
 		boolean hasDefusion = rc.hasUpgrade(DEFUSION);
 
