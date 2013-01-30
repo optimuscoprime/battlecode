@@ -25,7 +25,7 @@ public class RobotPlayer{
    static int OFFSET_MED = 2;
    static int OFFSET_THREAT = 3;
    static int OFFSET_ART = 4;
-   static int RUSH_ROUND = 100;
+   static int RUSH_ROUND = 150;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
@@ -442,7 +442,8 @@ lookAround: for (int d:directionOffsets){
 								break lookAround;
                      if(d == Direction.NONE)
 								break lookAround;
-							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d != Direction.NONE)){
+							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d !=
+                     Direction.NONE)&&(rc.senseMine(rc.getLocation().add(d)) == null)){
 								rc.spawn(d);
                         //System.out.println("friendlies" + numFriendlies + "spawning");
 								break lookAround;
