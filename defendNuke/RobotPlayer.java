@@ -3,35 +3,35 @@ package defendNuke;
 Simple bot to build mines around the base and defend it whilst it researches nuke.
 Base on swarm2.
 Based largely on the swarm2 example
-*/
+ */
 
 import battlecode.common.*;
 
 public class RobotPlayer{
-	
+
 	static RobotController rc;
 	static int mult = 145;   //hopefully unique for clean comms.
 	static int status = 1;//1 is don't lay mines, 2 is lay mines
 
 	static int injured_health = 20;
 	static int full_health = 40;
-   static int SUPERIORITY = 10;
-   static int CAPTURE_PRIVACY_RADIUS = 5;
-   static int MINE_AROUND_HQ = 25;
+	static int SUPERIORITY = 10;
+	static int CAPTURE_PRIVACY_RADIUS = 5;
+	static int MINE_AROUND_HQ = 25;
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
 			mult = 314;   //so we can play ourselves needs to differ fromm above.
-		
+
 		while(true){
 			try{
 				if (rc.getType()==RobotType.SOLDIER){
-               if(rc.getRobot().getID()<=103){ //make the first few scout
-                  scoutCode();//this may finish if enemies are seen.
-                  soldierCode();
-               }else{
-                  soldierCode();
-               }
+					if(rc.getRobot().getID()<=103){ //make the first few scout
+						scoutCode();//this may finish if enemies are seen.
+						soldierCode();
+					}else{
+						soldierCode();
+					}
 				}else if (rc.getType()==RobotType.HQ){
 					hqCode();
 				}else if (rc.getType()==RobotType.MEDBAY){
@@ -47,82 +47,82 @@ public class RobotPlayer{
 			rc.yield();
 		}
 	}
-   private static int numEncampmentsOfType(RobotType type) throws GameActionException{
-      Robot[] friendlyObject = rc.senseNearbyGameObjects(Robot.class,100000000,rc.getTeam()); 
-      //get all objects.
-      int found=0;
-      // check numbers of each.  Would be more efficient to do one pass than one for each type..
-      for(int i=0; i < friendlyObject.length; i++){
-         RobotInfo rInfo = rc.senseRobotInfo(friendlyObject[i]);
-         if(rInfo.type == type)
-            found++;
-      }
-      return found;
-   }
-   private static void soldierCode(){
+	private static int numEncampmentsOfType(RobotType type) throws GameActionException{
+		Robot[] friendlyObject = rc.senseNearbyGameObjects(Robot.class,100000000,rc.getTeam()); 
+		//get all objects.
+		int found=0;
+		// check numbers of each.  Would be more efficient to do one pass than one for each type..
+		for(int i=0; i < friendlyObject.length; i++){
+			RobotInfo rInfo = rc.senseRobotInfo(friendlyObject[i]);
+			if(rInfo.type == type)
+				found++;
+		}
+		return found;
+	}
+	private static void soldierCode(){
 		MapLocation rallyPt = rc.getLocation();
-      boolean injured=false;
+		boolean injured=false;
 		while(true){
 			try{
 
-            Robot[] allies = rc.senseNearbyGameObjects(Robot.class,14,rc.getTeam());
-            Robot[] enemies = rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent());
-            Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class,14,rc.getTeam().opponent());
+				Robot[] allies = rc.senseNearbyGameObjects(Robot.class,14,rc.getTeam());
+				Robot[] enemies = rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent());
+				Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class,14,rc.getTeam().opponent());
 
-            if(rc.getEnergon() < injured_health)
-               injured=true;
-            if(rc.getEnergon() ==  full_health) //we're healed.  maxEnergon didn'tt work?
-               injured=false;
-               // lets deviate if low health.
-            if(injured || ((nearbyEnemies.length ==0) && (rc.getEnergon() < full_health ) )){
-               if (rc.isActive()){
-                  int medChannel=getChannel()+2;
-                  MapLocation medbayLoc= IntToMaplocation(rc.readBroadcast(medChannel));
-                  if(medbayLoc!= null){
-                     MapLocation myLoc=rc.getLocation();
-                     Direction finalDir = myLoc.directionTo(medbayLoc);
-                     if (Math.random()<.1)
-                        finalDir = finalDir.rotateRight();
-                     simpleMove(finalDir, myLoc,true);
-                  
-                  }else{
-                     //head for nearest encampment. (it'll cap as medbay)
-                     MapLocation futureMedbay=getNearbyNeutralEncampment(rc,50);
-                     if(futureMedbay!= null){
-                        freeGo(futureMedbay, allies, enemies, nearbyEnemies);
-                     }else{
-                        freeGo(rc.senseEnemyHQLocation(),allies,enemies,nearbyEnemies);
-                     }
-                  }
-               }
-            }else{
-               rc.setIndicatorString(0,"goal: "+rallyPt.toString());
-               //receive rally point from HQ
-               MapLocation received = IntToMaplocation(rc.readBroadcast(getChannel()));
-               if (received!= null)
-                  rallyPt = received;
-               //receive mining command
-               int ir = rc.readBroadcast(getChannel()+1);
-               if (ir!=0&&ir<=2)
-                  status = ir;
+				if(rc.getEnergon() < injured_health)
+					injured=true;
+				if(rc.getEnergon() ==  full_health) //we're healed.  maxEnergon didn'tt work?
+					injured=false;
+				// lets deviate if low health.
+				if(injured || ((nearbyEnemies.length ==0) && (rc.getEnergon() < full_health ) )){
+					if (rc.isActive()){
+						int medChannel=getChannel()+2;
+						MapLocation medbayLoc= IntToMaplocation(rc.readBroadcast(medChannel));
+						if(medbayLoc!= null){
+							MapLocation myLoc=rc.getLocation();
+							Direction finalDir = myLoc.directionTo(medbayLoc);
+							if (Math.random()<.1)
+								finalDir = finalDir.rotateRight();
+							simpleMove(finalDir, myLoc,true);
+
+						}else{
+							//head for nearest encampment. (it'll cap as medbay)
+							MapLocation futureMedbay=getNearbyNeutralEncampment(rc,50);
+									if(futureMedbay!= null){
+										freeGo(futureMedbay, allies, enemies, nearbyEnemies);
+									}else{
+										freeGo(rc.senseEnemyHQLocation(),allies,enemies,nearbyEnemies);
+									}
+						}
+					}
+				}else{
+					rc.setIndicatorString(0,"goal: "+rallyPt.toString());
+					//receive rally point from HQ
+					MapLocation received = IntToMaplocation(rc.readBroadcast(getChannel()));
+					if (received!= null)
+						rallyPt = received;
+					//receive mining command
+					int ir = rc.readBroadcast(getChannel()+1);
+					if (ir!=0&&ir<=2)
+						status = ir;
 
 
-               if (rc.isActive()){
-                  if (status == 1){//don't lay mines
-                     //move toward received goal, using swarm behavior
-                     freeGo(rallyPt,allies,enemies,nearbyEnemies);
-                  }else if (status == 2){//lay mines!
-                     if (goodPlace(rc.getLocation(),nearbyEnemies.length,enemies.length)&&rc.senseMine(rc.getLocation())==null){
-                        rc.layMine();
-                     }else{
-                        freeGo(rallyPt,allies,enemies,nearbyEnemies);
-                     }
-                  }
-               }
-            }
-         }catch (Exception e){
-            System.out.println("Soldier Exception");
-            e.printStackTrace();
+					if (rc.isActive()){
+						if (status == 1){//don't lay mines
+							//move toward received goal, using swarm behavior
+							freeGo(rallyPt,allies,enemies,nearbyEnemies);
+						}else if (status == 2){//lay mines!
+							if (goodPlace(rc.getLocation(),nearbyEnemies.length,enemies.length)&&rc.senseMine(rc.getLocation())==null){
+								rc.layMine();
+							}else{
+								freeGo(rallyPt,allies,enemies,nearbyEnemies);
+							}
+						}
+					}
+				}
+			}catch (Exception e){
+				System.out.println("Soldier Exception");
+				e.printStackTrace();
 			}
 			rc.yield();
 		}
@@ -132,12 +132,12 @@ public class RobotPlayer{
 
 	private static boolean goodPlace(MapLocation location, int nearbyEnemies, int enemies) {
 
-      if((nearbyEnemies > 0)|| (enemies == 0)) return false; //if dont mine if enemy not seen yet, or close
-      if(location.distanceSquaredTo(rc.senseHQLocation())<=MINE_AROUND_HQ)
-         return true;
+		if((nearbyEnemies > 0)|| (enemies == 0)) return false; //if dont mine if enemy not seen yet, or close
+		if(location.distanceSquaredTo(rc.senseHQLocation())<=MINE_AROUND_HQ)
+			return true;
 		return ((2*location.x+location.y)%5==0);//pickaxe without gaps
-//		return ((3*location.x+location.y)%8==0);//pickaxe with gaps
-//		return ((location.x+location.y)%2==0);//checkerboard
+		//		return ((3*location.x+location.y)%8==0);//pickaxe with gaps
+		//		return ((location.x+location.y)%2==0);//checkerboard
 	}
 	//Movement system
 	private static void freeGo(MapLocation target, Robot[] allies,Robot[] enemies,Robot[] nearbyEnemies) throws GameActionException {
@@ -146,7 +146,7 @@ public class RobotPlayer{
 		Direction toTarget = myLoc.directionTo(target);
 		int targetWeighting = targetWeight(myLoc.distanceSquaredTo(target));
 		MapLocation goalLoc = myLoc.add(toTarget,targetWeighting);//toward target, TODO weighted by the distance?
-		
+
 		if (enemies.length==0){
 			//find closest allied robot. repel away from that robot.
 			if(allies.length>0){
@@ -170,13 +170,13 @@ public class RobotPlayer{
 			if(nearbyEnemies.length>0){
 				MapLocation closestEnemy = findClosest(nearbyEnemies);
 				goalLoc = goalLoc.add(myLoc.directionTo(closestEnemy),10);
-         }else{// no nearby enemies; go toward far enemy
-            if(enemies.length>0){
-               MapLocation closestEnemy = findClosest(enemies);
-               goalLoc = goalLoc.add(myLoc.directionTo(closestEnemy),10);
-            }else{
-               goalLoc = goalLoc.add(myLoc.directionTo( rc.senseEnemyHQLocation()),9);
-            }
+			}else{// no nearby enemies; go toward far enemy
+				if(enemies.length>0){
+					MapLocation closestEnemy = findClosest(enemies);
+					goalLoc = goalLoc.add(myLoc.directionTo(closestEnemy),10);
+				}else{
+					goalLoc = goalLoc.add(myLoc.directionTo( rc.senseEnemyHQLocation()),9);
+				}
 			}
 		}
 		//TODO repel from allied mines?
@@ -195,105 +195,105 @@ public class RobotPlayer{
 			return 1;
 		}
 	}
-   private static MapLocation getNearbyNeutralEncampment(RobotController rc, int radius) throws Exception{
-      MapLocation nearestMedbay= null;
-      MapLocation[] nearEncamps=
-      rc.senseEncampmentSquares(rc.getLocation(),radius, Team.NEUTRAL);
-      int nearest_dist=10000;
-      for(int i=0; i < nearEncamps.length; i++){
-         if(rc.getLocation().distanceSquaredTo(nearEncamps[i]) < nearest_dist){
-            nearest_dist=rc.getLocation().distanceSquaredTo(nearEncamps[i]);
-            nearestMedbay=nearEncamps[i];
-         }
-      }
-      return nearestMedbay;
-   }
+	private static MapLocation getNearbyNeutralEncampment(RobotController rc, int radius) throws Exception{
+		MapLocation nearestMedbay= null;
+		MapLocation[] nearEncamps=
+				rc.senseEncampmentSquares(rc.getLocation(),radius, Team.NEUTRAL);
+		int nearest_dist=10000;
+		for(int i=0; i < nearEncamps.length; i++){
+			if(rc.getLocation().distanceSquaredTo(nearEncamps[i]) < nearest_dist){
+				nearest_dist=rc.getLocation().distanceSquaredTo(nearEncamps[i]);
+				nearestMedbay=nearEncamps[i];
+			}
+		}
+		return nearestMedbay;
+	}
 
 	private static void simpleMove(Direction dir, MapLocation myLoc, boolean defuseMines) throws GameActionException {
 		//first try to capture an encampment
-      int numEnemies =
-                     rc.senseNearbyGameObjects(Robot.class,CAPTURE_PRIVACY_RADIUS,rc.getTeam().opponent()).length;
-      int numArtilleryTargets=rc.senseNearbyGameObjects(Robot.class, RobotType.ARTILLERY.attackRadiusMaxSquared, rc.getTeam().opponent()).length;
+		int numEnemies =
+				rc.senseNearbyGameObjects(Robot.class,CAPTURE_PRIVACY_RADIUS,rc.getTeam().opponent()).length;
+		int numArtilleryTargets=rc.senseNearbyGameObjects(Robot.class, RobotType.ARTILLERY.attackRadiusMaxSquared, rc.getTeam().opponent()).length;
 		MapLocation enemyLoc = rc.senseEnemyHQLocation();
 
-      //int existingGens = numEncampmentsOfType(RobotType.GENERATOR);
-      //FIXME - these functions shouldn't really run twice.  They're slow. once we hit our cap we
-      //should store it and not even bother looping.
- 
-      //int existingSupp = numEncampmentsOfType(RobotType.SUPPLIER);
+		//int existingGens = numEncampmentsOfType(RobotType.GENERATOR);
+		//FIXME - these functions shouldn't really run twice.  They're slow. once we hit our cap we
+		//should store it and not even bother looping.
+
+		//int existingSupp = numEncampmentsOfType(RobotType.SUPPLIER);
 
 
 		if
-      (defuseMines && (rc.getTeamPower() > rc.senseCaptureCost()) && rc.senseEncampmentSquare(myLoc) &&
-      (numEnemies<1) && notMakeEncampWall(myLoc) ){//leisure indicator
+		(defuseMines && (rc.getTeamPower() > rc.senseCaptureCost()) && rc.senseEncampmentSquare(myLoc) &&
+				(numEnemies<1) && notMakeEncampWall(myLoc) ){//leisure indicator
 			if(rc.getEnergon() < injured_health){
-            //check if a medbay is a adjacent first.  If it is, build artillery. lols.
-            int medChannel=getChannel()+2;
-            MapLocation medbayLoc= IntToMaplocation(rc.readBroadcast(medChannel));
-            if(medbayLoc!= null){
-               if(rc.getLocation().isAdjacentTo(medbayLoc)){
-                  rc.captureEncampment(RobotType.ARTILLERY);
-               }else{
-                  rc.captureEncampment(RobotType.MEDBAY);
-               }
-            }else{
-               rc.captureEncampment(RobotType.MEDBAY);
-            }
-         }else {
-                  rc.captureEncampment(RobotType.ARTILLERY);
-         }
+				//check if a medbay is a adjacent first.  If it is, build artillery. lols.
+				int medChannel=getChannel()+2;
+				MapLocation medbayLoc= IntToMaplocation(rc.readBroadcast(medChannel));
+				if(medbayLoc!= null){
+					if(rc.getLocation().isAdjacentTo(medbayLoc)){
+						rc.captureEncampment(RobotType.ARTILLERY);
+					}else{
+						rc.captureEncampment(RobotType.MEDBAY);
+					}
+				}else{
+					rc.captureEncampment(RobotType.MEDBAY);
+				}
+			}else {
+				rc.captureEncampment(RobotType.ARTILLERY);
+			}
 		}else{
-         //then consider moving
-         doMove(dir,myLoc,defuseMines);
-      }
-   }
-   private static void doMove(Direction dir, MapLocation myLoc, boolean defuseMines) throws GameActionException{
+			//then consider moving
+			doMove(dir,myLoc,defuseMines);
+		}
+	}
+	private static void doMove(Direction dir, MapLocation myLoc, boolean defuseMines) throws GameActionException{
 
-      int[] directionOffsets = {0,1,-1,2,-2};
-      Direction lookingAtCurrently = null;
-      //argh, vims indenting has issues.
-lookAround: for (int d:directionOffsets){
-               lookingAtCurrently = Direction.values()[(dir.ordinal()+d+8)%8];
-               Team currentMine = rc.senseMine(myLoc.add(lookingAtCurrently));
-               if(rc.canMove(lookingAtCurrently)&&(defuseMines||(!defuseMines&&(currentMine==rc.getTeam()||currentMine==null)))){
-                  moveOrDefuse(lookingAtCurrently);
-                  break lookAround;
-               }
+		int[] directionOffsets = {0,1,-1,2,-2};
+		Direction lookingAtCurrently = null;
+		//argh, vims indenting has issues.
+		lookAround: for (int d:directionOffsets){
+			lookingAtCurrently = Direction.values()[(dir.ordinal()+d+8)%8];
+			Team currentMine = rc.senseMine(myLoc.add(lookingAtCurrently));
+			if(rc.canMove(lookingAtCurrently)&&(defuseMines||(!defuseMines&&(currentMine==rc.getTeam()||currentMine==null)))){
+				moveOrDefuse(lookingAtCurrently);
+				break lookAround;
+			}
 
-      } 
-   }
-
-
-            private static boolean notMakeEncampWall(MapLocation target) throws GameActionException{
-      // Function to tell if capturing a square makes an encampmentWall.
-      int Xobjects=0;
-      int Yobjects=0;
-      int diagObjects=0;
-//FIXME The better way to do this is by verifying if we're making a blocking structure.
-// aint nobody got not time for that, so I'm going to count how many friendly encampments are close.
-      if (rc.senseObjectAtLocation(target.add(Direction.EAST)) != null)              Xobjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.EAST).add(Direction.EAST)) != null)    Xobjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.WEST)) != null)              Xobjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.WEST).add(Direction.WEST)) != null)    Xobjects++;          
-
-      if (rc.senseObjectAtLocation(target.add(Direction.NORTH)) != null)             Yobjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.NORTH).add(Direction.NORTH)) != null)  Yobjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.SOUTH)) != null)             Yobjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.SOUTH).add(Direction.SOUTH)) != null)  Yobjects++;          
-
-      if (rc.senseObjectAtLocation(target.add(Direction.NORTH_EAST)) != null)             diagObjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.NORTH_WEST)) != null)  diagObjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.SOUTH_EAST)) != null)             diagObjects++;
-      if (rc.senseObjectAtLocation(target.add(Direction.SOUTH_WEST)) != null)  diagObjects++;          
+		} 
+	}
 
 
+	private static boolean notMakeEncampWall(MapLocation target) throws GameActionException{
+		// Function to tell if capturing a square makes an encampmentWall.
+		int Xobjects=0;
+		int Yobjects=0;
+		int diagObjects=0;
+		//FIXME The better way to do this is by verifying if we're making a blocking structure.
+		// aint nobody got not time for that, so I'm going to count how many friendly encampments are close.
+		if (rc.senseObjectAtLocation(target.add(Direction.EAST)) != null)              Xobjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.EAST).add(Direction.EAST)) != null)    Xobjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.WEST)) != null)              Xobjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.WEST).add(Direction.WEST)) != null)    Xobjects++;          
 
-      if((Xobjects >= 2) || (Yobjects >= 2) || ((Xobjects + Yobjects+diagObjects) >2 ))
-         return false; //makes a wall
-      else
-         return true;
+		if (rc.senseObjectAtLocation(target.add(Direction.NORTH)) != null)             Yobjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.NORTH).add(Direction.NORTH)) != null)  Yobjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.SOUTH)) != null)             Yobjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.SOUTH).add(Direction.SOUTH)) != null)  Yobjects++;          
 
-   }
+		if (rc.senseObjectAtLocation(target.add(Direction.NORTH_EAST)) != null)             diagObjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.NORTH_WEST)) != null)  diagObjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.SOUTH_EAST)) != null)             diagObjects++;
+		if (rc.senseObjectAtLocation(target.add(Direction.SOUTH_WEST)) != null)  diagObjects++;          
+
+
+
+		if((Xobjects >= 2) || (Yobjects >= 2) || ((Xobjects + Yobjects+diagObjects) >2 ))
+			return false; //makes a wall
+		else
+			return true;
+
+	}
 
 	private static void moveOrDefuse(Direction dir) throws GameActionException{
 		MapLocation ahead = rc.getLocation().add(dir);
@@ -318,33 +318,33 @@ lookAround: for (int d:directionOffsets){
 		}
 		return closestEnemy;
 	}
-//HQ
+	//HQ
 	private static void hqCode(){
 		MapLocation myLoc = rc.getLocation();
 		MapLocation enemyLoc = rc.senseEnemyHQLocation();
 		MapLocation rallyPt = myLoc.add(myLoc.directionTo(enemyLoc),5);
 		while(true){
 			try{
-				
+
 				if (rc.isActive()) {
-               int numFriendlies=rc.senseNearbyGameObjects(Robot.class,1000,rc.getTeam()).length;
-               int numEnemies =
-               rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent()).length;
-                  //I suspect the above includes encampments.. which is a major flaw.
+					int numFriendlies=rc.senseNearbyGameObjects(Robot.class,1000,rc.getTeam()).length;
+					int numEnemies =
+							rc.senseNearbyGameObjects(Robot.class,10000000,rc.getTeam().opponent()).length;
+					//I suspect the above includes encampments.. which is a major flaw.
 					// Spawn a soldier
 					//			Robot[] alliedRobots = rc.senseNearbyGameObjects(Robot.class,100000,rc.getTeam());
-               int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*2:SUPERIORITY;
+					int beGreaterBy= rc.hasUpgrade(Upgrade.FUSION) ? SUPERIORITY*2:SUPERIORITY;
 
 					if(((rc.getTeamPower()-40>10)||(Clock.getRoundNum()<2))&&(numFriendlies <
-               (numEnemies/2 +beGreaterBy))){
+							(numEnemies/2 +beGreaterBy))){
 						lookAround: for (Direction d:Direction.values()){
-                     if(d == Direction.OMNI)
+							if(d == Direction.OMNI)
 								break lookAround;
-                     if(d == Direction.NONE)
+							if(d == Direction.NONE)
 								break lookAround;
 							if (rc.canMove(d)&&(d != Direction.OMNI)&&(d != Direction.NONE)){
 								rc.spawn(d);
-                        //System.out.println("friendlies" + numFriendlies + "spawning");
+								//System.out.println("friendlies" + numFriendlies + "spawning");
 								break lookAround;
 							}
 						}
@@ -359,7 +359,7 @@ lookAround: for (int d:directionOffsets){
 					}
 
 				}
-				
+
 				//move the rally point if it is a capfutureencampment
 				MapLocation[] alliedEncampments = rc.senseAlliedEncampmentSquares();
 				if (alliedEncampments.length>0&&among(alliedEncampments,rallyPt)){
@@ -368,28 +368,28 @@ lookAround: for (int d:directionOffsets){
 						rallyPt = closestEncampment;
 					}
 				}
-				
+
 				//if(rc.getEnergon()<300||Clock.getRoundNum()>400||rc.senseEnemyNukeHalfDone()){//kill enemy if nearing round limit or injured
 				if(1==2){// how about we don't attach and just defend our base.
 					rallyPt = enemyLoc;
 				}
-				
+
 				//message allies about where to go
 				int channel = getChannel();
 				int msg = MapLocationToInt(rallyPt);
 				rc.broadcast(channel, msg);
 				rc.setIndicatorString(0,"Posted "+msg+" to "+channel);
-				
+
 				//message allies about whether to mine
-            int nearbyEnemies=rc.senseNearbyGameObjects(Robot.class,1000000,rc.getTeam().opponent()).length;
+				int nearbyEnemies=rc.senseNearbyGameObjects(Robot.class,1000000,rc.getTeam().opponent()).length;
 				if
-            ( (rc.hasUpgrade(Upgrade.PICKAXE) && (nearbyEnemies<2) )|| 
-            ( (nearbyEnemies<3)&&(Clock.getRoundNum()<150) )){
+				( (rc.hasUpgrade(Upgrade.PICKAXE) && (nearbyEnemies<2) )|| 
+						( (nearbyEnemies<3)&&(Clock.getRoundNum()<150) )){
 					rc.broadcast(getChannel()+1, 2);
 				}else{
 					rc.broadcast(getChannel()+1, 1);
-            }
-				
+				}
+
 			}catch (Exception e){
 				System.out.println("Soldier Exception");
 				e.printStackTrace();
@@ -401,18 +401,18 @@ lookAround: for (int d:directionOffsets){
 		MapLocation myLoc = rc.getLocation();
 		while(true){
 			try{
-				
-            if (rc.isActive()) {
 
-               //move the rally point if it is a capfutureencampment
+				if (rc.isActive()) {
 
-               //message allies about where to go
-               int medChannel = getChannel() + 2;
-               int msg = MapLocationToInt(myLoc);
-               rc.broadcast(medChannel, msg);
-               rc.setIndicatorString(0,"Posted "+msg+" to "+ (medChannel));
+					//move the rally point if it is a capfutureencampment
 
-            }
+					//message allies about where to go
+					int medChannel = getChannel() + 2;
+					int msg = MapLocationToInt(myLoc);
+					rc.broadcast(medChannel, msg);
+					rc.setIndicatorString(0,"Posted "+msg+" to "+ (medChannel));
+
+				}
 			}catch (Exception e){
 				System.out.println("Soldier Exception");
 				e.printStackTrace();
@@ -420,26 +420,26 @@ lookAround: for (int d:directionOffsets){
 			rc.yield();
 		}
 	}
-   private static void artilleryCode(){
-      MapLocation myLoc = rc.getLocation();
-      while(true){
-         try{
+	private static void artilleryCode(){
+		MapLocation myLoc = rc.getLocation();
+		while(true){
+			try{
 
-            if (rc.isActive()) {
+				if (rc.isActive()) {
 
-               Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class,RobotType.ARTILLERY.attackRadiusMaxSquared,rc.getTeam().opponent());
-               
-               if(nearbyEnemies.length > 0){
-                  rc.attackSquare(findClosest(nearbyEnemies));
-               }
-            }
-         }catch (Exception e){
-            System.out.println("Soldier Exception");
-            e.printStackTrace();
-         }
-         rc.yield();
-      }
-   }
+					Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class,RobotType.ARTILLERY.attackRadiusMaxSquared,rc.getTeam().opponent());
+
+					if(nearbyEnemies.length > 0){
+						rc.attackSquare(findClosest(nearbyEnemies));
+					}
+				}
+			}catch (Exception e){
+				System.out.println("Soldier Exception");
+				e.printStackTrace();
+			}
+			rc.yield();
+		}
+	}
 
 	//Messaging functions
 	public static int getChannel(){
@@ -459,13 +459,13 @@ lookAround: for (int d:directionOffsets){
 			return new MapLocation(x,y);
 		}
 	}
-//locating encampment
+	//locating encampment
 	public static MapLocation captureEncampments(MapLocation[] alliedEncampments) throws GameActionException{
 		MapLocation[] allEncampments = rc.senseAllEncampmentSquares();
 		//locate uncaptured encampments within a certain radius
 		MapLocation[] neutralEncampments = new MapLocation[allEncampments.length];
 		int neInd = 0;
-		
+
 		// Compute nearest encampment (counting the enemy HQ)
 		outer: for(MapLocation enc: allEncampments) {
 			for(MapLocation aenc: alliedEncampments) 
@@ -478,7 +478,7 @@ lookAround: for (int d:directionOffsets){
 			}
 		}
 		rc.setIndicatorString(2, "neutral enc det "+neInd+" round "+Clock.getRoundNum());
-		
+
 		if (neInd>0){
 			//proceed to an encampment and capture it
 			int which = (int) ((Math.random()*100)%neInd);
@@ -497,59 +497,59 @@ lookAround: for (int d:directionOffsets){
 		return false;
 	}
 
-   private static void scoutCode(){
-      MapLocation myLoc = rc.getLocation();
-      while(true){
-         try{
+	private static void scoutCode(){
+		MapLocation myLoc = rc.getLocation();
+		while(true){
+			try{
 
-            if (rc.isActive()) { 
-               
-               Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class, 40,rc.getTeam().opponent());
-               if(nearbyEnemies.length>1)
-                  return;//scouting's done.
+				if (rc.isActive()) { 
+
+					Robot[] nearbyEnemies = rc.senseNearbyGameObjects(Robot.class, 40,rc.getTeam().opponent());
+					if(nearbyEnemies.length>1)
+						return;//scouting's done.
 
 
-               boolean rotating_left_on_cant_move = (Math.random() < 0.5);
+						boolean rotating_left_on_cant_move = (Math.random() < 0.5);
 
-               // aim to move directly towards enemy HQ
-               Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+						// aim to move directly towards enemy HQ
+						Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
 
-               for (int i = 0; i < 8; i++) {
+						for (int i = 0; i < 8; i++) {
 
-                  if (rc.isActive()) {
-                     MapLocation location_of_dir = rc.getLocation().add(dir);
+							if (rc.isActive()) {
+								MapLocation location_of_dir = rc.getLocation().add(dir);
 
-                     if (rc.senseMine(location_of_dir) != null) {
-                        rc.defuseMine(location_of_dir);
-                        break;
-                     } else {
+								if (rc.senseMine(location_of_dir) != null) {
+									rc.defuseMine(location_of_dir);
+									break;
+								} else {
 
-                        if (rc.canMove(dir)) {
-                           //rc.setIndicatorString(0, "Last direction moved:"+dir.toString());
-                           //System.out.println("About to move" +  rc.getLocation().toString() + dir.toString() );
-                           rc.move(dir);
-                           //System.out.println("Moved" +  rc.getLocation().toString() + dir.toString() );
-                           //rc.breakpoint();
-                           i=8;
-                           break;
-                        } else {
-                           if (rotating_left_on_cant_move) {
-                              dir = dir.rotateLeft();
-                           } else {
-                              dir = dir.rotateRight();
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-         }catch (Exception e){
-            System.out.println("Scout Exception");
-            e.printStackTrace();
-         }
-         rc.yield();
-      }
-   }
+									if (rc.canMove(dir)) {
+										//rc.setIndicatorString(0, "Last direction moved:"+dir.toString());
+										//System.out.println("About to move" +  rc.getLocation().toString() + dir.toString() );
+										rc.move(dir);
+										//System.out.println("Moved" +  rc.getLocation().toString() + dir.toString() );
+										//rc.breakpoint();
+										i=8;
+										break;
+									} else {
+										if (rotating_left_on_cant_move) {
+											dir = dir.rotateLeft();
+										} else {
+											dir = dir.rotateRight();
+										}
+									}
+								}
+							}
+						}
+				}
+			}catch (Exception e){
+				System.out.println("Scout Exception");
+				e.printStackTrace();
+			}
+			rc.yield();
+		}
+	}
 
 }
 

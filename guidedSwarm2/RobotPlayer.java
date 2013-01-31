@@ -3,16 +3,16 @@ package guidedSwarm2;
 import battlecode.common.*;
 
 public class RobotPlayer{
-	
+
 	static RobotController rc;
 	static int mult = 234;
 	static int status = 1;//1 is don't lay mines, 2 is lay mines
-	
+
 	public static void run(RobotController myRC){
 		rc = myRC;
 		if (rc.getTeam()==Team.A)
 			mult = 114;
-		
+
 		while(true){
 			try{
 				if (rc.getType()==RobotType.SOLDIER){
@@ -32,7 +32,7 @@ public class RobotPlayer{
 		while(true){
 			try{
 				rc.setIndicatorString(0,"goal: "+rallyPt.toString());
-				
+
 				//receive rally point from HQ
 				MapLocation received = IntToMaplocation(rc.readBroadcast(getChannel()));
 				if (received!= null)
@@ -65,8 +65,8 @@ public class RobotPlayer{
 		}
 	}
 	private static boolean goodPlace(MapLocation location) {
-//		return ((3*location.x+location.y)%8==0);//pickaxe with gaps
-//		return ((2*location.x+location.y)%5==0);//pickaxe without gaps
+		//		return ((3*location.x+location.y)%8==0);//pickaxe with gaps
+		//		return ((2*location.x+location.y)%5==0);//pickaxe without gaps
 		return ((location.x+location.y)%2==0);//checkerboard
 	}
 	//Movement system
@@ -76,7 +76,7 @@ public class RobotPlayer{
 		Direction toTarget = myLoc.directionTo(target);
 		int targetWeighting = targetWeight(myLoc.distanceSquaredTo(target));
 		MapLocation goalLoc = myLoc.add(toTarget,targetWeighting);//toward target, TODO weighted by the distance?
-		
+
 		if (enemies.length==0){
 			//find closest allied robot. repel away from that robot.
 			if(allies.length>0){
@@ -166,14 +166,14 @@ public class RobotPlayer{
 		}
 		return closestEnemy;
 	}
-//HQ
+	//HQ
 	private static void hqCode(){
 		MapLocation myLoc = rc.getLocation();
 		MapLocation enemyLoc = rc.senseEnemyHQLocation();
 		MapLocation rallyPt = myLoc.add(myLoc.directionTo(enemyLoc),5);
 		while(true){
 			try{
-				
+
 				if (rc.isActive()) {
 					// Spawn a soldier
 					//			Robot[] alliedRobots = rc.senseNearbyGameObjects(Robot.class,100000,rc.getTeam());
@@ -188,7 +188,7 @@ public class RobotPlayer{
 						rc.researchUpgrade(Upgrade.PICKAXE);
 					}
 				}
-				
+
 				//move the rally point if it is a captured encampment
 				MapLocation[] alliedEncampments = rc.senseAlliedEncampmentSquares();
 				if (alliedEncampments.length>0&&among(alliedEncampments,rallyPt)){
@@ -197,22 +197,22 @@ public class RobotPlayer{
 						rallyPt = closestEncampment;
 					}
 				}
-				
+
 				if(rc.getEnergon()<300||Clock.getRoundNum()>2000||rc.senseEnemyNukeHalfDone()){//kill enemy if nearing round limit or injured
 					rallyPt = enemyLoc;
 				}
-				
+
 				//message allies about where to go
 				int channel = getChannel();
 				int msg = MapLocationToInt(rallyPt);
 				rc.broadcast(channel, msg);
 				rc.setIndicatorString(0,"Posted "+msg+" to "+channel);
-				
+
 				//message allies about whether to mine
 				if (/*rc.hasUpgrade(Upgrade.PICKAXE)*/rc.senseNearbyGameObjects(Robot.class,1000000,rc.getTeam().opponent()).length<3){
 					rc.broadcast(getChannel()+1, 2);
 				}
-				
+
 			}catch (Exception e){
 				System.out.println("Soldier Exception");
 				e.printStackTrace();
@@ -238,13 +238,13 @@ public class RobotPlayer{
 			return new MapLocation(x,y);
 		}
 	}
-//locating encampment
+	//locating encampment
 	public static MapLocation captureEncampments(MapLocation[] alliedEncampments) throws GameActionException{
 		MapLocation[] allEncampments = rc.senseAllEncampmentSquares();
 		//locate uncaptured encampments within a certain radius
 		MapLocation[] neutralEncampments = new MapLocation[allEncampments.length];
 		int neInd = 0;
-		
+
 		// Compute nearest encampment (counting the enemy HQ)
 		outer: for(MapLocation enc: allEncampments) {
 			for(MapLocation aenc: alliedEncampments) 
@@ -257,7 +257,7 @@ public class RobotPlayer{
 			}
 		}
 		rc.setIndicatorString(2, "neutral enc det "+neInd+" round "+Clock.getRoundNum());
-		
+
 		if (neInd>0){
 			//proceed to an encampment and capture it
 			int which = (int) ((Math.random()*100)%neInd);

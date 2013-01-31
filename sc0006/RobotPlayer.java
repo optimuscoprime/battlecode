@@ -11,40 +11,40 @@ import battlecode.common.RobotType;
  * The HQ will spawn soldiers continuously. 
  */
 public class RobotPlayer {
-    public static void run(RobotController rc) {
-	while (true) {
-	    try {
-		if (rc.getType() == RobotType.HQ) {
-		    if (rc.isActive()) {
-			// Spawn a soldier
-			Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
-			if (rc.canMove(dir)) {
-			    rc.spawn(dir);
+	public static void run(RobotController rc) {
+		while (true) {
+			try {
+				if (rc.getType() == RobotType.HQ) {
+					if (rc.isActive()) {
+						// Spawn a soldier
+						Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+						if (rc.canMove(dir)) {
+							rc.spawn(dir);
+						}
+					}
+				} else if (rc.getType() == RobotType.SOLDIER) {
+					if (rc.isActive()) {
+
+						// aim to move directly towards enemy HQ
+						Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
+
+						MapLocation location_of_dir = rc.getLocation().add(dir);
+
+						if (rc.senseMine(location_of_dir) != null) {
+							rc.defuseMine(location_of_dir);
+						} else {
+							if (rc.canMove(dir)) {
+								rc.move(dir);
+							}
+						}			
+					}
+				}
+
+				// End turn
+				rc.yield();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-		    }
-		} else if (rc.getType() == RobotType.SOLDIER) {
-		    if (rc.isActive()) {
-
-			// aim to move directly towards enemy HQ
-			Direction dir = rc.getLocation().directionTo(rc.senseEnemyHQLocation());
-
-			MapLocation location_of_dir = rc.getLocation().add(dir);
-
-			if (rc.senseMine(location_of_dir) != null) {
-			    rc.defuseMine(location_of_dir);
-			} else {
-			    if (rc.canMove(dir)) {
-				rc.move(dir);
-			    }
-			}			
-		    }
 		}
-
-		// End turn
-		rc.yield();
-	    } catch (Exception e) {
-		e.printStackTrace();
-	    }
 	}
-    }
 }

@@ -10,7 +10,7 @@ public class EncampmentPlayer extends BasePlayer {
 		super(rc);
 	}
 	public void run() throws GameActionException {
-		
+
 	}
 }
 

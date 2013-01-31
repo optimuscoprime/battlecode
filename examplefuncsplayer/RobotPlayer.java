@@ -35,7 +35,7 @@ public class RobotPlayer {
 							}
 						}
 					}
-					
+
 					if (Math.random()<0.01 && rc.getTeamPower()>5) {
 						// Write the number 5 to a position on the message board corresponding to the robot's ID
 						rc.broadcast(rc.getRobot().getID()%GameConstants.BROADCAST_MAX_CHANNELS, 5);
